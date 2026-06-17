@@ -1,0 +1,48 @@
+# CAO Audit Navigator
+
+A web app for a Chief Audit Officer to **browse, read, and interrogate** an organisation's internal audit reports — demonstrated on 39 public UNICEF OIAI reports (2024–2026). Plain HTML/CSS/JS, no framework, no build step.
+
+The defining property: **every factual claim the app shows is backed by a verbatim quote that is programmatically verified against the source report text.** A quote that doesn't match is publicly flagged `⚠ unverified`, never silently shown as fact. The full rules (A1–A8) are in [CLAUDE.md](CLAUDE.md) — the project constitution.
+
+## Quickstart
+
+```sh
+./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
+```
+
+Open http://localhost:8801, then put your Anthropic API key in **⚙ Settings** (stored only in your browser's localStorage; calls go directly from the browser to the Claude API). Alternatively, switch Settings to any OpenAI-compatible endpoint (Ollama / vLLM / LiteLLM) for fully local demos.
+
+> Port 8801 is the default because 8765 belongs to the DAMA app. The API key, usage meter, and offline cache are per-origin — they don't follow you across ports.
+
+## What's inside
+
+| Surface | What it does |
+|---|---|
+| **✦ Guide** | "What is your objective today?" — scoped briefing for a new CAO, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
+| **Browse** | Faceted navigation (year, type, region, conclusion, topic, risk, observation rating) with exact live counts. |
+| **Dashboard** | Observations by year × rating, topic × year heatmap, agreed actions by stated due date — every figure computed in JS and clickable through to the evidence. |
+| **Report view** | Structured cards (conclusion, findings, agreed actions, noteworthy practices) beside the full report text; clicking any quote highlights the exact passage. |
+| **Ask this report** | Chat scoped to the open report. Answers only from its text; absent topics get "Not covered in this report." |
+| **Ask all reports** | Route → compute-from-index → read → answer pipeline with a visible progress trail. Facts come cited per report; interpretation appears only in a separately labeled Synthesis block. |
+
+Citations render as chips: ✓ verified (deep link highlights the passage in the report), or ⚠ quarantined when the quote doesn't match the source — with one automatic, verification-gated repair attempt.
+
+## iPhone / PWA
+
+On the same Wi-Fi, open `http://<your-mac>.local:8801` in Safari → Share → **Add to Home Screen**. The app installs standalone with its own icon. On localhost (and any HTTPS origin) a service worker precaches the index and all reports, so browsing and reading work offline; the Ask features always need a connection. Over plain LAN http the app is installable but online-only (browsers require a secure context for offline caching).
+
+## Data
+
+- `library/index.json` — the verified index: 39 records, 280 observations, 651 evidence quotes, built offline and checked by `tools/verify_index.js` (650 exact matches + 1 page-number-artifact tolerance, 0 failures). Curation caveats: [library/INDEX_NOTES.md](library/INDEX_NOTES.md).
+- `library/vocabulary.json` — controlled topic/risk vocabulary (27 + 27 entries); every tag is defensible by a quote in its record.
+- `UNICEF Reports/` — source `.md` files (PDF extractions). Read-only ground truth; never edited.
+
+## Documentation map
+
+- [CLAUDE.md](CLAUDE.md) — the constitution: product stance, accuracy rules A1–A8, data model, tech decisions.
+- [BUILD_PLAN.md](BUILD_PLAN.md) — implementation companion: per-step specs and acceptance checks.
+- [TESTLOG.md](TESTLOG.md) — verification record for every release (expected vs. actual). Still pending there: the live adversarial A1–A8 question sets, which need an API key.
+
+## What this is NOT
+
+Not a general audit advisor, not a re-rating engine, not open-web, not an editor of the reports. The assistant answers **only** from the repository — "What is this country's GDP?" gets "Not covered in this report."

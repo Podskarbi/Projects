@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CAO Audit Navigator</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f5fbf">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CAO Audit">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css?v=1.0.6">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">CAO</span>
+    <span class="brand-name">Audit Navigator</span>
+    <span class="brand-sub" id="brandSub"></span>
+  </div>
+  <nav class="app-nav">
+    <a href="#/guide" class="nav-btn" data-nav="guide">✦ Guide</a>
+    <a href="#/browse" class="nav-btn" data-nav="browse">Browse</a>
+    <a href="#/dash" class="nav-btn" data-nav="dash">Dashboard</a>
+    <a href="#/ask" class="nav-btn" data-nav="ask">Ask all reports</a>
+    <button type="button" class="nav-btn ghost" id="settingsBtn" title="API key settings">⚙ Settings</button>
+  </nav>
+</header>
+
+<div id="fatalError" class="fatal" hidden></div>
+
+<main>
+
+  <!-- ───────────────── Browse view ───────────────── -->
+  <section id="view-browse" class="view" hidden>
+    <aside class="facet-pane" id="facetDrawer" aria-label="Filters">
+      <div class="facet-pane-head"><span>Filters</span>
+        <button type="button" class="send-btn" id="facetsDone">Done</button></div>
+      <div id="facetPane"></div>
+    </aside>
+    <div id="facetBackdrop" hidden></div>
+    <div class="results-pane">
+      <div class="hint-banner" id="guideHint" hidden>
+        <span>New here? The <strong>✦ Guide</strong> walks you to an overview, a topic, or a board-prep pack.</span>
+        <span class="hint-actions"><a href="#/guide" class="link-btn">Open the Guide</a>
+        <button type="button" class="link-btn" id="guideHintDismiss">Dismiss</button></span>
+      </div>
+      <div class="results-head">
+        <button type="button" class="nav-btn" id="filtersBtn">Filters</button>
+        <span id="resultsCount"></span>
+        <button type="button" class="link-btn" id="clearFilters" hidden>Clear all filters</button>
+      </div>
+      <div id="resultsList" class="results-list"></div>
+    </div>
+  </section>
+
+  <!-- ───────────────── Single-report view ───────────────── -->
+  <section id="view-report" class="view" hidden>
+    <div class="report-topbar">
+      <a href="#/browse" class="link-btn">← Back to browse</a>
+      <span id="reportCrumb" class="crumb"></span>
+    </div>
+    <div class="report-layout">
+      <div class="report-cards" id="reportCards"></div>
+      <div class="report-right">
+        <div class="tabs" id="reportTabs">
+          <button type="button" class="tab active" data-tab="text">Report text</button>
+          <button type="button" class="tab" data-tab="chat">Ask this report</button>
+        </div>
+        <div class="tab-body" id="tab-text">
+          <div class="report-text" id="reportTextPane">Loading report text…</div>
+        </div>
+        <div class="tab-body" id="tab-chat" hidden>
+          <div class="chat-msgs" id="reportChatMsgs">
+            <div class="chat-hint">Questions are answered <strong>only from this report</strong>. Every factual
+              claim carries a verified verbatim citation; anything the report doesn't cover is answered with
+              “Not covered in this report.”</div>
+          </div>
+          <form class="chat-form" id="reportChatForm">
+            <textarea id="reportChatInput" rows="2" placeholder="Ask about this report… (Enter to send, Shift+Enter for newline)"></textarea>
+            <button type="submit" class="send-btn" id="reportChatSend">Ask</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────── Guide ───────────────── -->
+  <section id="view-guide" class="view" hidden>
+    <div id="guideRoot"></div>
+  </section>
+
+  <!-- ───────────────── Dashboard ───────────────── -->
+  <section id="view-dash" class="view" hidden>
+    <div id="dashRoot"></div>
+  </section>
+
+  <!-- ───────────────── Repository-wide chat ───────────────── -->
+  <section id="view-ask" class="view" hidden>
+    <div class="ask-wrap">
+      <div class="chat-msgs" id="repoChatMsgs">
+        <div class="chat-hint">Ask across all <span id="askRepoCount"></span> reports — e.g. “How many cyber-related
+          observations in 2025?” or “Are the same controls rated differently across offices?”.
+          Counts come from the verified index; narrative claims carry verified verbatim citations.</div>
+      </div>
+      <form class="chat-form" id="repoChatForm">
+        <textarea id="repoChatInput" rows="2" placeholder="Ask across the whole repository… (Enter to send, Shift+Enter for newline)"></textarea>
+        <button type="submit" class="send-btn" id="repoChatSend">Ask</button>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<!-- ───────────────── Settings modal ───────────────── -->
+<dialog id="settingsModal">
+  <form method="dialog" class="settings-form" id="settingsForm">
+    <h2>Settings</h2>
+
+    <label for="providerSelect">Model provider</label>
+    <select id="providerSelect">
+      <option value="anthropic">Claude (Anthropic cloud)</option>
+      <option value="openai">Local / on-prem (OpenAI-compatible)</option>
+    </select>
+
+    <div id="anthropicFields">
+      <label for="apiKeyInput">Anthropic API key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <p class="settings-note">Stored only in this browser's <code>localStorage</code>. Calls go directly from your
+        browser to the Claude API. Get a key at <code>console.anthropic.com</code>.</p>
+    </div>
+
+    <div id="localFields" hidden>
+      <label for="localUrlInput">Endpoint URL</label>
+      <input type="text" id="localUrlInput" placeholder="http://localhost:11434/v1/chat/completions"
+        autocomplete="off" spellcheck="false">
+      <label for="localModelInput">Model name</label>
+      <input type="text" id="localModelInput" placeholder="e.g. llama3.3:70b" autocomplete="off" spellcheck="false">
+      <label for="localKeyInput">API key (optional, for vLLM/proxy auth)</label>
+      <input type="password" id="localKeyInput" placeholder="leave empty for Ollama" autocomplete="off" spellcheck="false">
+      <p class="settings-note">Works with Ollama, vLLM, LiteLLM or any OpenAI-compatible server. For Ollama, start it
+        with <code>OLLAMA_ORIGINS=*</code> so the browser can reach it, and set a large context window
+        (<code>num_ctx</code>) — repository-wide questions send long report texts.</p>
+    </div>
+
+    <h3 class="usage-heading">Token usage &amp; cost</h3>
+    <div id="usageStats"></div>
+    <p class="settings-note">Exact token counts from API responses, priced at <code>claude-sonnet-4-6</code> list rates
+      ($3 / $15 per 1M in/out; caching $3.75 write / $0.30 read). Local traffic shows what the same tokens would have
+      cost on Claude. <button type="button" class="link-btn" id="usageReset">Reset counters</button></p>
+
+    <div class="settings-actions">
+      <button type="button" class="link-btn" id="settingsCancel">Cancel</button>
+      <button type="submit" class="send-btn" id="settingsSave" value="save">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+// Surface any script error visibly — a blank screen must never be silent.
+(function () {
+  function show(msg) {
+    var el = document.getElementById("fatalError");
+    if (el) { el.hidden = false; el.textContent = msg; }
+  }
+  window.addEventListener("error", function (e) {
+    show("JavaScript error: " + (e.message || e.type) +
+      (e.filename ? "  [" + e.filename.split("/").pop() + ":" + e.lineno + "]" : ""));
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    show("Unhandled error: " + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+})();
+</script>
+<script src="config.js"></script>
+<script src="app.js?v=1.0.6"></script>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>UNICEF Audit Reports — Download & Convert</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+  h1 { color: #1a73a7; }
+  #status { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  .log { font-family: monospace; font-size: 13px; max-height: 400px; overflow-y: auto; }
+  .log p { margin: 4px 0; }
+  .ok  { color: #2e7d32; } .err { color: #c62828; } .info { color: #555; }
+  #progress { background: #e0e0e0; border-radius: 4px; height: 20px; margin: 12px 0; }
+  #bar { background: #1a73a7; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s; }
+  button { background: #1a73a7; color: white; border: none; padding: 12px 28px; border-radius: 6px; font-size: 15px; cursor: pointer; margin-top: 10px; }
+  button:disabled { background: #aaa; cursor: not-allowed; }
+</style>
+</head>
+<body>
+<h1>UNICEF Audit Reports Converter</h1>
+<p>This page downloads all 39 UNICEF internal audit reports (2024–2026), extracts the text, and saves them as Markdown files in a ZIP archive.</p>
+<button id="startBtn" onclick="run()">▶ Start Download &amp; Convert</button>
+<div id="status">
+  <div id="progress"><div id="bar"></div></div>
+  <div id="counter">Ready — click Start</div>
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const REPORTS = [
+  // 2024
+  {title:"2024 OIAI Audit Report of Afghanistan Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2031/file/2024-afghanistan-country-office-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of the Mauritania Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2051/file/2024-oiai-mauritania-country-office-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of UNICEF's Accountability to Affected Populations", url:"https://www.unicef.org/auditandinvestigation/media/2026/file/2024-oiai-accountabily-to-affected-populations-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report on Construction Management", url:"https://www.unicef.org/auditandinvestigation/media/1966/file/2024-oiai-construction-management-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of Protection from Sexual Exploitation and Abuse", url:"https://www.unicef.org/auditandinvestigation/media/1996/file/2024-oiai-protection-from-sexual-exploitation-and-abuse-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report on the Lebanon Country Office", url:"https://www.unicef.org/auditandinvestigation/media/1961/file/2024-oiai-lebanon-country-office-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report on the Kenya Country Office", url:"https://www.unicef.org/auditandinvestigation/media/1956/file/2024-oiai-kenya-country-office-audit.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of the Egypt Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2066/file/2024-oiai-egypt-country-office-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report on Ukraine Regional Refugee Response", url:"https://www.unicef.org/auditandinvestigation/media/1976/file/2024-regional-refugee-response-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of UNICEF's Institutional Service Contracts", url:"https://www.unicef.org/auditandinvestigation/media/2046/file/2024-institutional-service-contracts-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of Ghana Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2041/file/2024-oiai-ghana-country-office-audit-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of the Pakistan Country Office", url:"https://www.unicef.org/auditandinvestigation/media/1981/file/2024-oiai-pakistan-country-office-report.pdf.pdf"},
+  {title:"2024 OIAI Audit Report of the Türkiye Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2061/file/2024_t%C3%BCrkiye_courntry_office_audit_%20report.pdf.pdf"},
+  // 2025
+  {title:"2025 OIAI Audit Report of Albania Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2111/file/2025-albania-country-office-audit-report.PDF.pdf"},
+  {title:"2025 OIAI Audit Report of the Libya Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2096/file/2025-libya-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of Lesotho Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2116/file/2025-lesotho-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Republic of Zambia Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2121/file/2025-zambia-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Report on the Middle East and North Africa Regional Office", url:"https://www.unicef.org/auditandinvestigation/media/2126/file/2025-oiai-middle-east-and-north-africa-regional-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of Romania Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2141/file/2025-romania-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of Algeria Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2136/file/2025-algeria-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Philippines Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2146/file/2025-philippines-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Democratic Republic of the Congo Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2166/file/2025-democratic-republic-of-the-congo-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of Gabon Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2156/file/2025-gabon-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Cameroon Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2161/file/2025-cameroon-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of the Burkina Faso Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2176/file/2025-burkina-faso-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report of the Eswatini Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2196/file/2025-eswatini-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Kyrgyzstan Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2201/file/2025-kyrgyzstan-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Congo Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2206/file/2025-congo-country-office-audit-report.pdf.pdf"},
+  {title:"2025 OIAI Audit Report on the Haiti Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2211/file/haiti-country-office-audit-report.pdf.pdf"},
+  // 2026
+  {title:"2026 OIAI Audit Reports on the Armenia Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2231/file/2026-armenia-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Bangladesh Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2236/file/2026-bangladesh-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report of the Dominican Republic Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2241/file/2026-dominican-republic-country-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Chad Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2261/file/2026-chad-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Colombia Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2251/file/2026-colombia-country-office-audit-report.pdf.pdf"},
+  {title:"2026 Internal Audit of Travel Management", url:"https://www.unicef.org/auditandinvestigation/media/2266/file/2026-travel-management-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Senegal Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2271/file/2026-senegal-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Sri Lanka Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2276/file/2026-sri-lanka-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Rwanda Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2281/file/2026-rwanda-country-office-audit-report.pdf.pdf"},
+  {title:"2026 OIAI Audit Report on the Chile Country Office", url:"https://www.unicef.org/auditandinvestigation/media/2356/file/2026-chile-country-office-audit-report.pdf.pdf"},
+];
+
+function safeFilename(title) {
+  return title.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '_') + '.md';
+}
+
+function log(msg, cls='info') {
+  const p = document.createElement('p');
+  p.className = cls;
+  p.textContent = msg;
+  document.getElementById('log').appendChild(p);
+  document.getElementById('log').scrollTop = 99999;
+}
+
+async function pdfToText(arrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(item => item.str).join(' ');
+    text += pageText + '\n\n';
+  }
+  return text;
+}
+
+function toMarkdown(title, text, sourceUrl) {
+  let md = `# ${title}\n\n`;
+  md += `**Source:** [${sourceUrl}](${sourceUrl})\n\n`;
+  md += `---\n\n`;
+  md += text.replace(/\n{3,}/g, '\n\n').trim();
+  return md;
+}
+
+async function run() {
+  document.getElementById('startBtn').disabled = true;
+  const zip = new JSZip();
+  let done = 0, failed = 0;
+
+  for (const report of REPORTS) {
+    document.getElementById('counter').textContent = `Processing ${done + failed + 1} / ${REPORTS.length}: ${report.title.substring(0, 60)}...`;
+    try {
+      const resp = await fetch(report.url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const buf = await resp.arrayBuffer();
+      const text = await pdfToText(buf);
+      const md = toMarkdown(report.title, text, report.url);
+      zip.file(safeFilename(report.title), md);
+      log(`✓ ${report.title}`, 'ok');
+      done++;
+    } catch(e) {
+      log(`✗ ${report.title}: ${e.message}`, 'err');
+      failed++;
+    }
+    document.getElementById('bar').style.width = ((done + failed) / REPORTS.length * 100) + '%';
+  }
+
+  document.getElementById('counter').textContent = `Complete: ${done} succeeded, ${failed} failed. Generating ZIP...`;
+  log('Generating ZIP file...', 'info');
+
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'UNICEF_Audit_Reports_2024-2026.zip';
+  a.click();
+
+  log(`ZIP downloaded! Extract to: Projekty/Audit Report App/Unicef Reports/`, 'ok');
+  document.getElementById('counter').textContent = `✅ Done! ${done} reports converted. ZIP saved to your Downloads folder.`;
+  document.getElementById('startBtn').disabled = false;
+}
+</script>
+</body>
+</html>
