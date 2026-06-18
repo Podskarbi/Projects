@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.13">
+<link rel="stylesheet" href="styles.css?v=1.0.14">
 </head>
 <body>
 
@@ -52,6 +52,31 @@
         <span>New here? The <strong>✦ Guide</strong> walks you to an overview, a topic, or a board-prep pack.</span>
         <span class="hint-actions"><a href="#/guide" class="link-btn">Open the Guide</a>
         <button type="button" class="link-btn" id="guideHintDismiss">Dismiss</button></span>
+      </div>
+      <div class="home-grid">
+        <section class="home-ask">
+          <div class="home-ask-head">
+            <div>
+              <h1>Ask the reports</h1>
+              <p id="browseAskScope">All reports</p>
+            </div>
+            <span class="scope-pill" id="browseScopePill">39 reports</span>
+          </div>
+          <form class="home-ask-form" id="browseAskForm">
+            <textarea id="browseAskInput" rows="3" placeholder="Ask a question about the selected reports…"></textarea>
+            <button type="submit" class="send-btn">Ask selected reports</button>
+          </form>
+        </section>
+        <div class="home-actions">
+          <a href="#/guide" class="home-action">
+            <span>Guide</span>
+            <strong>Show me how to use this app</strong>
+          </a>
+          <a href="#/dash" class="home-action">
+            <span>Dashboard</span>
+            <strong>Open the evidence dashboard</strong>
+          </a>
+        </div>
       </div>
       <div class="results-head">
         <button type="button" class="nav-btn" id="filtersBtn">Filters</button>
@@ -107,6 +132,7 @@
   <!-- ───────────────── Repository-wide chat ───────────────── -->
   <section id="view-ask" class="view" hidden>
     <div class="ask-wrap">
+      <div id="repoScopeNotice" class="scope-notice" hidden></div>
       <div class="chat-msgs" id="repoChatMsgs">
         <div class="ask-empty" id="repoAskEmpty">
           <div class="chat-hint">Ask across all <span id="askRepoCount"></span> reports. Counts come from the verified
@@ -205,6 +231,6 @@
 })();
 </script>
 <script src="config.js"></script>
-<script src="app.js?v=1.0.13"></script>
+<script src="app.js?v=1.0.14"></script>
 </body>
 </html>

@@ -42,6 +42,9 @@ const state = {
   guide: null,                // guide flow state {objective, step, years, regions, topics, focus}
   guideAsks: [],              // questions offered by the current guide screen
   pendingAsk: null,           // question to pre-fill (not send) in repo chat
+  pendingAskAutoSend: false,  // browse handoff submits after navigation
+  pendingAskScope: null,      // browse filter scope to apply to the next repo chat
+  repoScope: null,            // active repo chat scope {ids, label}
   reportChat: [],             // [{role, content}] — reset on report change
   repoChat: [],               // [{role, content}] — retained transcript (capped for API)
   slimIndex: null,            // cached slim index JSON string for routing
@@ -141,12 +144,23 @@ function route() {
     showReport(decodeURIComponent(h.slice("#/report/".length)));
   } else if (h === "#/ask") {
     showView("ask");
+    if (state.pendingAskScope) {
+      state.repoScope = state.pendingAskScope;
+      state.pendingAskScope = null;
+    }
+    updateRepoScopeNotice();
     updateRepoAskEmpty();
     if (state.pendingAsk) { // guide handoff: pre-filled, never auto-sent
       const input = $("#repoChatInput");
       input.value = state.pendingAsk;
+      const autoSend = state.pendingAskAutoSend;
       state.pendingAsk = null;
+      state.pendingAskAutoSend = false;
       input.focus();
+      if (autoSend) {
+        if (canCallApi()) setTimeout(() => $("#repoChatForm").requestSubmit(), 0);
+        else openSettings();
+      }
     }
   } else if (h === "#/dash") {
     renderDashboard();
@@ -269,6 +283,7 @@ function renderResults() {
   const matches = computeMatches(state.filters);
   const anyFilter = Object.values(state.filters).some(s => s.size);
   const matchedObs = matches.reduce((s, m) => s + (m.matchedObs ? m.matchedObs.length : 0), 0);
+  renderBrowseHome(matches, matchedObs, anyFilter);
   $("#resultsCount").textContent =
     `${matches.length} of ${state.index.length} reports` + (anyFilter ? " match the selected filters" : "") +
     (matchedObs ? ` (${matchedObs} matching observation${matchedObs === 1 ? "" : "s"})` : "");
@@ -307,6 +322,37 @@ function renderResults() {
       <div class="result-tags">${tagHtml}</div>${matchedHtml}</a>`;
   }
   list.innerHTML = html;
+}
+
+function currentBrowseScope(matches = computeMatches(state.filters), anyFilter = Object.values(state.filters).some(s => s.size)) {
+  return {
+    ids: matches.map(m => m.rec.id),
+    label: anyFilter ? browseScopeLabel() : "All reports",
+    hasFilters: anyFilter,
+  };
+}
+
+function browseScopeLabel() {
+  const bits = [];
+  const add = (key, label, values = filterLabels(key).sort()) => {
+    if (values.length) bits.push(`${label}: ${joinNatural(values, "or")}`);
+  };
+  add("year", "Year", filterValues("year").sort((a, b) => Number(a) - Number(b)));
+  add("type", "Type");
+  add("region", "Region", filterValues("region").sort());
+  add("conclusion", "Conclusion");
+  add("topic", "Topic");
+  add("risk", "Risk");
+  add("obsRating", "Observation rating");
+  return bits.length ? bits.join(" · ") : "All reports";
+}
+
+function renderBrowseHome(matches, matchedObs, anyFilter) {
+  const scope = currentBrowseScope(matches, anyFilter);
+  $("#browseAskScope").textContent = scope.label;
+  const reportUnit = scope.ids.length === 1 ? "report" : "reports";
+  $("#browseScopePill").textContent = `${scope.ids.length} ${reportUnit}` +
+    (matchedObs ? ` · ${matchedObs} observation${matchedObs === 1 ? "" : "s"}` : "");
 }
 
 function filterValues(key) {
@@ -1470,6 +1516,11 @@ function topicRiskOrQuery(fq, question) {
   };
 }
 
+function restrictResultToScope(result, scopeIds) {
+  if (!scopeIds || !scopeIds.size) return result;
+  return { ...result, rows: result.rows.filter(row => scopeIds.has(row.rec.id)) };
+}
+
 function facetResultHtml(result, fq, note = null, exactFq = null, queryLabel = null) {
   const { rows, obsLevel } = result;
   const constraints = queryLabel || facetConstraints(fq);
@@ -1574,12 +1625,17 @@ async function askRepository(question) {
   const scroll = () => { msgs.scrollTop = msgs.scrollHeight; };
 
   try {
+    const scope = state.repoScope;
+    const scopeIds = scope && scope.ids && scope.ids.length ? new Set(scope.ids) : null;
     // ── Stage 1: route ──
     const s1 = trailStep(trail, "Routing — selecting relevant reports from the index");
     scroll();
     // Give the router short conversational context for follow-up questions.
     const prior = state.repoChat.slice(-5, -1).map(m => `${m.role}: ${m.content.slice(0, 500)}`).join("\n");
-    const routerUser = (prior ? `Conversation so far (for context):\n${prior}\n\n` : "") + `Question: ${question}`;
+    const scopeText = scopeIds
+      ? `Browse scope (hard limit): answer only from these ${scope.ids.length} selected report ids: ${scope.ids.join(", ")}. Scope label: ${scope.label}.\n\n`
+      : "";
+    const routerUser = (prior ? `Conversation so far (for context):\n${prior}\n\n` : "") + scopeText + `Question: ${question}`;
     const routeText = await callClaude({
       system: routerSystem(),
       messages: [{ role: "user", content: routerUser }],
@@ -1588,6 +1644,8 @@ async function askRepository(question) {
     let routing;
     try { routing = parseRouterJson(routeText); }
     catch (e) { s1.fail("could not parse routing decision"); throw new Error("Routing stage returned unparseable output. Please retry."); }
+    if (scopeIds && routing.ids.length) routing.ids = routing.ids.filter(id => scopeIds.has(id));
+    if (scopeIds && !routing.ids.length && !routing.computable) routing.ids = scope.ids.slice();
     s1.done(routing.ids.length ? `${routing.ids.length} report(s) selected` : "no report text needed");
 
     // ── Stage 2: compute locally what is computable (A6) ──
@@ -1615,6 +1673,7 @@ async function askRepository(question) {
           queryLabel = broadened.queryLabel;
         }
       }
+      result = restrictResultToScope(result, scopeIds);
       const s2 = trailStep(trail, "Computing exact counts from the verified index");
       indexBox.insertAdjacentHTML("beforeend", facetResultHtml(result, displayQuery, resultNote, exactQuery, queryLabel));
       // 0 rows = nothing citable; a null note lets the A3 short-circuit below fire
@@ -2020,6 +2079,21 @@ function updateRepoAskEmpty() {
   empty.hidden = $$("#repoChatMsgs .msg").length > 0;
 }
 
+function updateRepoScopeNotice() {
+  const el = $("#repoScopeNotice");
+  if (!el) return;
+  const scope = state.repoScope;
+  if (!scope || !scope.ids || !scope.ids.length) {
+    el.hidden = true;
+    el.innerHTML = "";
+    return;
+  }
+  const unit = scope.ids.length === 1 ? "report" : "reports";
+  el.hidden = false;
+  el.innerHTML = `<strong>Scope:</strong> ${escHtml(scope.label)} · ${scope.ids.length} ${unit}
+    <button type="button" class="link-btn" id="clearRepoScope">Clear scope</button>`;
+}
+
 function openSettings() {
   const dlg = $("#settingsModal");
   $("#apiKeyInput").value = localStorage.getItem("cao_api_key") || "";
@@ -2402,12 +2476,39 @@ function bindChatForm(formSel, inputSel, handler) {
 bindChatForm("#reportChatForm", "#reportChatInput", askReport);
 bindChatForm("#repoChatForm", "#repoChatInput", askRepository);
 
+$("#browseAskForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = $("#browseAskInput");
+  const q = input.value.trim();
+  if (!q || state.busy) return;
+  const matches = computeMatches(state.filters);
+  const anyFilter = Object.values(state.filters).some(s => s.size);
+  const scope = currentBrowseScope(matches, anyFilter);
+  if (!scope.ids.length) {
+    input.value = "";
+    input.placeholder = "No selected reports. Adjust filters and ask again.";
+    return;
+  }
+  state.pendingAsk = q;
+  state.pendingAskScope = scope.hasFilters ? scope : null;
+  if (!scope.hasFilters) state.repoScope = null;
+  state.pendingAskAutoSend = true;
+  input.value = "";
+  location.hash = "#/ask";
+});
+
 $("#repoAskEmpty").addEventListener("click", e => {
   const prompt = e.target.closest("[data-prompt]");
   if (!prompt) return;
   const input = $("#repoChatInput");
   input.value = prompt.dataset.prompt;
   input.focus();
+});
+
+$("#repoScopeNotice").addEventListener("click", e => {
+  if (!e.target.closest("#clearRepoScope")) return;
+  state.repoScope = null;
+  updateRepoScopeNotice();
 });
 
 // Settings
