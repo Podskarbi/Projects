@@ -3,24 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Enterprise Document Intelligence</title>
+<title>Piotr Paklerski Projects</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f5fbf">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.16">
+<link rel="stylesheet" href="styles.css?v=1.0.17">
 </head>
 <body>
 
 <header class="app-header">
   <div class="brand">
-    <span class="brand-mark">EDI</span>
-    <span class="brand-name">Enterprise Document Intelligence</span>
+    <span class="brand-mark">PP</span>
+    <span class="brand-name">Projects</span>
     <span class="brand-sub" id="brandSub"></span>
   </div>
   <nav class="app-nav">
+    <a href="#/home" class="nav-btn" data-nav="home"><span class="nav-full">Projects</span><span class="nav-short">Home</span></a>
     <a href="#/guide" class="nav-btn" data-nav="guide"><span class="nav-full">✦ Guide</span><span class="nav-short">Guide</span></a>
     <a href="#/browse" class="nav-btn" data-nav="browse"><span class="nav-full">Browse</span><span class="nav-short">Browse</span></a>
     <a href="#/dash" class="nav-btn" data-nav="dash"><span class="nav-full">Dashboard</span><span class="nav-short">Dash</span></a>
@@ -38,6 +39,77 @@
 <div id="fatalError" class="fatal" hidden></div>
 
 <main>
+  <!-- ───────────────── Portfolio home ───────────────── -->
+  <section id="view-home" class="view" hidden>
+    <div class="portfolio-wrap">
+      <section class="portfolio-hero">
+        <div class="portfolio-copy">
+          <p class="section-kicker">Project portfolio</p>
+          <h1>Piotr Paklerski Projects</h1>
+          <p>Practical Gen AI and data products built as working demos, with an emphasis on evidence, controls, and usable decision surfaces.</p>
+          <div class="portfolio-actions">
+            <a class="send-btn" href="#/ask">Open the featured app</a>
+            <a class="nav-btn" href="#/dash">View dashboard</a>
+          </div>
+        </div>
+        <div class="portfolio-preview" aria-label="Enterprise Document Intelligence preview">
+          <div class="preview-top">
+            <span></span><span></span><span></span>
+            <strong>Enterprise Document Intelligence</strong>
+          </div>
+          <div class="preview-body">
+            <div class="preview-sidebar">
+              <span></span><span></span><span></span><span></span>
+            </div>
+            <div class="preview-main">
+              <div class="preview-question">How many cyber-related observations were reported in 2025?</div>
+              <div class="preview-answer">
+                <span class="preview-check">✓</span>
+                <div>
+                  <strong>Route from verified index</strong>
+                  <p>Read selected reports · verify citations · label caveats</p>
+                </div>
+              </div>
+              <div class="preview-bars"><span></span><span></span><span></span><span></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="portfolio-projects" aria-labelledby="projectsTitle">
+        <div class="portfolio-section-head">
+          <p class="section-kicker">Featured</p>
+          <h2 id="projectsTitle">Live projects</h2>
+        </div>
+        <div class="project-grid">
+          <article class="project-card project-card-featured">
+            <div class="project-card-body">
+              <p class="project-eyebrow">Gen AI · document intelligence · public-data demo</p>
+              <h3>Enterprise Document Intelligence</h3>
+              <p>Natural-language interrogation over 39 public UNICEF OIAI reports, with deterministic dashboards, scoped retrieval, verified verbatim citations, and a limited built-in Haiku proxy for reviewers.</p>
+              <div class="project-metrics" aria-label="Project metrics">
+                <span><strong>39</strong> reports</span>
+                <span><strong>280</strong> observations</span>
+                <span><strong>651</strong> verified quotes</span>
+              </div>
+              <div class="project-links">
+                <a class="send-btn" href="#/ask">Ask all reports</a>
+                <a class="nav-btn" href="#/browse">Browse evidence</a>
+                <a class="link-btn" href="https://github.com/Podskarbi/Projects">GitHub</a>
+              </div>
+            </div>
+          </article>
+          <article class="project-card project-card-muted">
+            <div class="project-card-body">
+              <p class="project-eyebrow">Next</p>
+              <h3>More demos will live here</h3>
+              <p>This page is structured as a portfolio hub, so future apps can be added without changing the share link.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </section>
 
   <!-- ───────────────── Browse view ───────────────── -->
   <section id="view-browse" class="view" hidden>
@@ -240,6 +312,6 @@
 })();
 </script>
 <script src="config.js"></script>
-<script src="app.js?v=1.0.16"></script>
+<script src="app.js?v=1.0.17"></script>
 </body>
 </html>

@@ -83,7 +83,8 @@ async function init() {
   for (const t of state.vocab.topics) state.topicLabel[t.id] = t.label;
   for (const r of state.vocab.risks) state.riskLabel[r.id] = r.label;
   const obsTotal = state.index.reduce((s, r) => s + r.observations.length, 0);
-  $("#brandSub").textContent = `${state.index.length} OIAI reports · ${obsTotal} observations`;
+  state.brandStats = `${state.index.length} OIAI reports · ${obsTotal} observations`;
+  $("#brandSub").textContent = "portfolio hub";
   $("#askRepoCount").textContent = String(state.index.length);
   renderBrowse();
   syncFacetDrawerState(false);
@@ -138,10 +139,12 @@ function toggleFacets(open, restoreFocus = true) {
   else if (restoreFocus && isFacetDrawerMode()) $("#filtersBtn").focus();
 }
 
-/* Hash routing: #/browse · #/report/<id> · #/dash · #/ask · #/guide */
+/* Hash routing: #/home · #/browse · #/report/<id> · #/dash · #/ask · #/guide */
 function route() {
   const h = location.hash;
-  if (h.startsWith("#/report/")) {
+  if (!h || h === "#/" || h === "#/home") {
+    showView("home");
+  } else if (h.startsWith("#/report/")) {
     showReport(decodeURIComponent(h.slice("#/report/".length)));
   } else if (h === "#/ask") {
     showView("ask");
@@ -170,7 +173,7 @@ function route() {
     renderGuide();
     showView("guide");
   } else {
-    showView("browse");
+    showView("home");
   }
 }
 
@@ -2055,9 +2058,10 @@ function fmtTokens(n) {
 /* ───────────────────────── UI State ───────────────────────── */
 
 function showView(name) {
-  for (const v of ["browse", "report", "ask", "dash", "guide"]) $(`#view-${v}`).hidden = v !== name;
+  for (const v of ["home", "browse", "report", "ask", "dash", "guide"]) $(`#view-${v}`).hidden = v !== name;
   $$(".nav-btn[data-nav]").forEach(b =>
     b.classList.toggle("active", b.dataset.nav === name || (name === "report" && b.dataset.nav === "browse")));
+  $("#brandSub").textContent = name === "home" ? "portfolio hub" : state.brandStats;
   if (name !== "browse" && $("#facetDrawer").classList.contains("open")) toggleFacets(false, false);
 }
 

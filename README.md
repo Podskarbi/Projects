@@ -12,7 +12,7 @@ The defining property: **every factual claim the app shows is backed by a verbat
 ./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
 ```
 
-Open http://localhost:8801. New browsers default to the built-in demo proxy:
+Open http://localhost:8801. The root page is a portfolio homepage; open the featured app from there or jump straight to `http://localhost:8801/#/ask`. New browsers default to the built-in demo proxy:
 `https://edi-demo-proxy.podskarbi.workers.dev/api/messages`. It uses a low-cost Claude Haiku model through a Cloudflare Worker, has rate/spend limits, may not always be available, and can be less capable on complex synthesis.
 
 For stronger or private demos, switch provider in **⚙ Settings** to your own Claude API key or your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM).
@@ -23,6 +23,7 @@ For stronger or private demos, switch provider in **⚙ Settings** to your own C
 
 | Surface | What it does |
 |---|---|
+| **Projects home** | Portfolio hub for sharing several demos from one URL. Enterprise Document Intelligence is the first live project. |
 | **✦ Guide** | "What is your objective today?" — scoped briefing, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
 | **Browse** | Faceted navigation (year, type, region, conclusion, topic, risk, observation rating) with exact live counts. |
 | **Dashboard** | Observations by year × rating, topic × year heatmap, agreed actions by stated due date — every figure computed in JS and clickable through to the evidence. |
