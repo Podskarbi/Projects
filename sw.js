@@ -12,7 +12,7 @@
  *
  * Bump CACHE_VERSION when shipping changes to the precached set.
  */
-const CACHE_VERSION = "cao-v14";
+const CACHE_VERSION = "cao-v15";
 const SHELL = [
   "./",
   "index.html",

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.19">
+<link rel="stylesheet" href="styles.css?v=1.0.20">
 </head>
 <body>
 
@@ -46,7 +46,12 @@
         <div class="portfolio-copy">
           <p class="section-kicker">Project portfolio</p>
           <h1>Piotr Paklerski Projects</h1>
-          <p>Practical Gen AI and data products built as working demos, with an emphasis on evidence, controls, and usable decision surfaces.</p>
+          <p>Working Gen AI and data-product demos focused on enterprise use cases: natural-language interfaces, governed retrieval, evidence-backed answers, and decision surfaces that are usable by non-technical stakeholders.</p>
+          <div class="portfolio-proof" aria-label="What this portfolio demonstrates">
+            <span>Retrieval over real documents</span>
+            <span>Verified citations</span>
+            <span>Human-in-the-loop controls</span>
+          </div>
           <div class="portfolio-actions">
             <a class="send-btn" href="#/browse">Open the featured app</a>
             <a class="nav-btn" href="#/dash">View dashboard</a>
@@ -76,6 +81,31 @@
         </div>
       </section>
 
+      <section class="portfolio-explainer" aria-labelledby="demoTitle">
+        <div>
+          <p class="section-kicker">What this demonstrates</p>
+          <h2 id="demoTitle">Enterprise AI patterns, shown in a working browser app</h2>
+        </div>
+        <div class="capability-grid">
+          <article>
+            <strong>Natural-language document access</strong>
+            <p>Users can ask questions across a collection instead of learning a search syntax or manually opening every file.</p>
+          </article>
+          <article>
+            <strong>Grounded answers with controls</strong>
+            <p>Factual claims are tied back to source passages, and unsupported or unverified citations are visibly quarantined.</p>
+          </article>
+          <article>
+            <strong>Deterministic analytics plus Gen AI</strong>
+            <p>Counts, filters, and dashboard figures come from a verified index; the model is used for language understanding and synthesis.</p>
+          </article>
+          <article>
+            <strong>Practical deployment model</strong>
+            <p>The demo uses a limited built-in proxy by default, while still supporting user-provided Claude or open-source model endpoints.</p>
+          </article>
+        </div>
+      </section>
+
       <section class="portfolio-projects" aria-labelledby="projectsTitle">
         <div class="portfolio-section-head">
           <p class="section-kicker">Featured</p>
@@ -87,6 +117,11 @@
               <p class="project-eyebrow">Gen AI · document intelligence · public-data demo</p>
               <h3>Enterprise Document Intelligence</h3>
               <p>Natural-language interrogation over 39 public UNICEF OIAI reports, with deterministic dashboards, scoped retrieval, verified verbatim citations, and a limited built-in Haiku proxy for reviewers.</p>
+              <ul class="project-points">
+                <li>Routes questions to relevant reports before reading full text.</li>
+                <li>Separates exact counts from model-generated narrative synthesis.</li>
+                <li>Shows how AI outputs can be constrained, cited, and reviewable.</li>
+              </ul>
               <div class="project-metrics" aria-label="Project metrics">
                 <span><strong>39</strong> reports</span>
                 <span><strong>280</strong> observations</span>
@@ -312,6 +347,6 @@
 })();
 </script>
 <script src="config.js"></script>
-<script src="app.js?v=1.0.19"></script>
+<script src="app.js?v=1.0.20"></script>
 </body>
 </html>

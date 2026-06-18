@@ -25,7 +25,7 @@ For stronger or private demos, switch provider in **⚙ Settings** to your own C
 
 | Surface | What it does |
 |---|---|
-| **Projects home** | Portfolio hub for sharing several demos from one URL. Enterprise Document Intelligence is the first live project. |
+| **Projects home** | Portfolio hub for sharing several demos from one URL. It explains the Gen AI patterns demonstrated by the featured Enterprise Document Intelligence app. |
 | **✦ Guide** | "What is your objective today?" — scoped briefing, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
 | **Browse** | Faceted navigation (year, type, region, conclusion, topic, risk, observation rating) with exact live counts. |
 | **Dashboard** | Observations by year × rating, topic × year heatmap, agreed actions by stated due date — every figure computed in JS and clickable through to the evidence. |
