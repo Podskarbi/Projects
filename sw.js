@@ -1,5 +1,5 @@
 /*
- * CAO Audit Navigator — service worker (PWA offline support).
+ * Enterprise Document Intelligence — service worker (PWA offline support).
  *
  * Strategy:
  *  - App shell (html/js/css/manifest/icons): network-first, cache fallback —
@@ -12,7 +12,7 @@
  *
  * Bump CACHE_VERSION when shipping changes to the precached set.
  */
-const CACHE_VERSION = "cao-v1";
+const CACHE_VERSION = "cao-v8";
 const SHELL = [
   "./",
   "index.html",

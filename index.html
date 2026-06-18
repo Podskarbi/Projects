@@ -3,31 +3,37 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CAO Audit Navigator</title>
+<title>Enterprise Document Intelligence</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f5fbf">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="CAO Audit">
+<meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.6">
+<link rel="stylesheet" href="styles.css?v=1.0.13">
 </head>
 <body>
 
 <header class="app-header">
   <div class="brand">
-    <span class="brand-mark">CAO</span>
-    <span class="brand-name">Audit Navigator</span>
+    <span class="brand-mark">EDI</span>
+    <span class="brand-name">Enterprise Document Intelligence</span>
     <span class="brand-sub" id="brandSub"></span>
   </div>
   <nav class="app-nav">
-    <a href="#/guide" class="nav-btn" data-nav="guide">✦ Guide</a>
-    <a href="#/browse" class="nav-btn" data-nav="browse">Browse</a>
-    <a href="#/dash" class="nav-btn" data-nav="dash">Dashboard</a>
-    <a href="#/ask" class="nav-btn" data-nav="ask">Ask all reports</a>
-    <button type="button" class="nav-btn ghost" id="settingsBtn" title="API key settings">⚙ Settings</button>
+    <a href="#/guide" class="nav-btn" data-nav="guide"><span class="nav-full">✦ Guide</span><span class="nav-short">Guide</span></a>
+    <a href="#/browse" class="nav-btn" data-nav="browse"><span class="nav-full">Browse</span><span class="nav-short">Browse</span></a>
+    <a href="#/dash" class="nav-btn" data-nav="dash"><span class="nav-full">Dashboard</span><span class="nav-short">Dash</span></a>
+    <a href="#/ask" class="nav-btn" data-nav="ask"><span class="nav-full">Ask all reports</span><span class="nav-short">Ask</span></a>
+    <button type="button" class="nav-btn ghost" id="settingsBtn" title="API key settings" aria-label="API key settings">
+      <span class="nav-full">⚙ Settings</span><span class="nav-short">⚙</span>
+    </button>
   </nav>
 </header>
+
+<div class="demo-banner" role="note">
+  Public-data portfolio demo only. Uses published UNICEF OIAI reports for demonstration purposes; no confidential or proprietary data is included.
+</div>
 
 <div id="fatalError" class="fatal" hidden></div>
 
@@ -52,6 +58,7 @@
         <span id="resultsCount"></span>
         <button type="button" class="link-btn" id="clearFilters" hidden>Clear all filters</button>
       </div>
+      <div id="browseNlPanel" class="browse-nl" hidden></div>
       <div id="resultsList" class="results-list"></div>
     </div>
   </section>
@@ -101,9 +108,19 @@
   <section id="view-ask" class="view" hidden>
     <div class="ask-wrap">
       <div class="chat-msgs" id="repoChatMsgs">
-        <div class="chat-hint">Ask across all <span id="askRepoCount"></span> reports — e.g. “How many cyber-related
-          observations in 2025?” or “Are the same controls rated differently across offices?”.
-          Counts come from the verified index; narrative claims carry verified verbatim citations.</div>
+        <div class="ask-empty" id="repoAskEmpty">
+          <div class="chat-hint">Ask across all <span id="askRepoCount"></span> reports. Counts come from the verified
+            index; narrative claims carry verified verbatim citations.</div>
+          <div class="ask-prompt-grid" aria-label="Suggested questions">
+            <button type="button" class="ask-prompt" data-prompt="How many cyber-related observations were reported in 2025?">Cyber observations in 2025</button>
+            <button type="button" class="ask-prompt" data-prompt="Which High-rated PSEA or safeguarding observations did OIAI report, by office?">High-rated PSEA findings</button>
+            <button type="button" class="ask-prompt" data-prompt="Which controls or topics were rated differently across offices? Show both sides with citations.">Differently rated controls</button>
+            <button type="button" class="ask-prompt" data-prompt="What noteworthy practices did OIAI highlight across the reports?">Noteworthy practices</button>
+          </div>
+          <div class="ask-pipeline" aria-label="Answer pipeline">
+            <span>Route from index</span><span>Read selected reports</span><span>Verify citations</span>
+          </div>
+        </div>
       </div>
       <form class="chat-form" id="repoChatForm">
         <textarea id="repoChatInput" rows="2" placeholder="Ask across the whole repository… (Enter to send, Shift+Enter for newline)"></textarea>
@@ -121,8 +138,9 @@
 
     <label for="providerSelect">Model provider</label>
     <select id="providerSelect">
-      <option value="anthropic">Claude (Anthropic cloud)</option>
-      <option value="openai">Local / on-prem (OpenAI-compatible)</option>
+      <option value="anthropic">Claude API provided by you</option>
+      <option value="openai">Open source model API provided by you</option>
+      <option value="proxy">Built-in API via proxy</option>
     </select>
 
     <div id="anthropicFields">
@@ -145,11 +163,23 @@
         (<code>num_ctx</code>) — repository-wide questions send long report texts.</p>
     </div>
 
+    <div id="proxyFields" hidden>
+      <p class="settings-note"><strong>Built-in API via proxy</strong> uses a server-side demo key managed by the app owner.
+        It is intended for portfolio review, has rate and spend limits, and may be temporarily unavailable. No API key is
+        stored in this browser.</p>
+      <label for="proxyUrlInput">Proxy URL</label>
+      <input type="text" id="proxyUrlInput" placeholder="https://edi-demo-proxy.your-subdomain.workers.dev/api/messages"
+        autocomplete="off" spellcheck="false">
+      <p class="settings-note">When the hosted proxy is not deployed on this origin, this option will show a request error.
+        You can still use your own Claude key or an OpenAI-compatible local endpoint.</p>
+    </div>
+
     <h3 class="usage-heading">Token usage &amp; cost</h3>
     <div id="usageStats"></div>
     <p class="settings-note">Exact token counts from API responses, priced at <code>claude-sonnet-4-6</code> list rates
-      ($3 / $15 per 1M in/out; caching $3.75 write / $0.30 read). Local traffic shows what the same tokens would have
-      cost on Claude. <button type="button" class="link-btn" id="usageReset">Reset counters</button></p>
+      ($3 / $15 per 1M in/out; caching $3.75 write / $0.30 read). Open-source local traffic shows what the same tokens
+      would have cost on Claude; built-in proxy traffic is subject to demo limits.
+      <button type="button" class="link-btn" id="usageReset">Reset counters</button></p>
 
     <div class="settings-actions">
       <button type="button" class="link-btn" id="settingsCancel">Cancel</button>
@@ -175,6 +205,6 @@
 })();
 </script>
 <script src="config.js"></script>
-<script src="app.js?v=1.0.6"></script>
+<script src="app.js?v=1.0.13"></script>
 </body>
 </html>

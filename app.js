@@ -1,6 +1,6 @@
 "use strict";
 /*
- * CAO Audit Navigator — all app logic.
+ * Enterprise Document Intelligence — all app logic.
  * Constitution: CLAUDE.md (accuracy rules A1–A8). Implementation spec: BUILD_PLAN.md.
  * Sections: State · Init · Browse · Report View · Citations · Verification ·
  *           Chat · Routing · Claude API · UI State · Utilities · Event Listeners
@@ -30,6 +30,7 @@ const state = {
   topicLabel: {},       // topic id -> label
   riskLabel: {},        // risk id -> label
   filters: emptyFilters(),
+  browseNlMode: "or",       // natural-language bridge: topic/risk relation, "or" favors recall
   expandedFacets: new Set(),  // facet keys showing all values
   reportCache: new Map(),     // file -> raw text
   normMaps: new Map(),        // file -> {norm, map, normND, mapND}
@@ -81,6 +82,7 @@ async function init() {
   $("#brandSub").textContent = `${state.index.length} OIAI reports · ${obsTotal} observations`;
   $("#askRepoCount").textContent = String(state.index.length);
   renderBrowse();
+  syncFacetDrawerState(false);
   if (!localStorage.getItem("cao_guide_seen")) $("#guideHint").hidden = false;
   route();
   // PWA: offline caching of the app shell + reports. Requires a secure context
@@ -109,9 +111,27 @@ async function selfDestructStaleWorker() {
 }
 
 // Mobile facet drawer
-function toggleFacets(open) {
-  $("#facetDrawer").classList.toggle("open", open);
-  $("#facetBackdrop").hidden = !open;
+function isFacetDrawerMode() {
+  return window.matchMedia("(max-width: 720px)").matches;
+}
+
+function syncFacetDrawerState(open) {
+  const drawer = $("#facetDrawer");
+  const backdrop = $("#facetBackdrop");
+  const drawerMode = isFacetDrawerMode();
+  const hidden = drawerMode && !open;
+  drawer.setAttribute("aria-hidden", hidden ? "true" : "false");
+  drawer.inert = hidden;
+  backdrop.hidden = drawerMode ? !open : true;
+  $("#filtersBtn").setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function toggleFacets(open, restoreFocus = true) {
+  const drawer = $("#facetDrawer");
+  drawer.classList.toggle("open", open);
+  syncFacetDrawerState(open);
+  if (open && isFacetDrawerMode()) $("#facetsDone").focus();
+  else if (restoreFocus && isFacetDrawerMode()) $("#filtersBtn").focus();
 }
 
 /* Hash routing: #/browse · #/report/<id> · #/dash · #/ask · #/guide */
@@ -121,6 +141,7 @@ function route() {
     showReport(decodeURIComponent(h.slice("#/report/".length)));
   } else if (h === "#/ask") {
     showView("ask");
+    updateRepoAskEmpty();
     if (state.pendingAsk) { // guide handoff: pre-filled, never auto-sent
       const input = $("#repoChatInput");
       input.value = state.pendingAsk;
@@ -254,6 +275,7 @@ function renderResults() {
   const nActive = Object.values(state.filters).reduce((s, set) => s + set.size, 0);
   $("#filtersBtn").textContent = nActive ? `Filters · ${nActive}` : "Filters";
   $("#clearFilters").hidden = !anyFilter;
+  renderBrowseNaturalLanguage(anyFilter, matches, matchedObs);
 
   const list = $("#resultsList");
   if (!matches.length) {
@@ -285,6 +307,96 @@ function renderResults() {
       <div class="result-tags">${tagHtml}</div>${matchedHtml}</a>`;
   }
   list.innerHTML = html;
+}
+
+function filterValues(key) {
+  return [...state.filters[key]];
+}
+
+function filterLabels(key, values = filterValues(key)) {
+  const labelers = {
+    type: typeLabel,
+    topic: v => state.topicLabel[v] || v,
+    risk: v => state.riskLabel[v] || v,
+    conclusion: ratingShort,
+    obsRating: v => `${v}-rated`,
+  };
+  const label = labelers[key] || (v => v);
+  return values.map(label);
+}
+
+function joinNatural(items, joiner = "or") {
+  if (!items.length) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} ${joiner} ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, ${joiner} ${items[items.length - 1]}`;
+}
+
+function buildBrowseQuestion() {
+  const parts = [];
+  const years = filterValues("year").sort((a, b) => Number(a) - Number(b));
+  const regions = filterValues("region").sort();
+  const types = filterLabels("type").sort();
+  const conclusions = filterLabels("conclusion").sort();
+  const obsRatings = filterLabels("obsRating").sort();
+  const topics = filterLabels("topic").sort();
+  const risks = filterLabels("risk").sort();
+  const topicRisk = [...topics.map(v => `${v} topic`), ...risks.map(v => `${v} risk`)];
+  const topicRiskJoin = state.browseNlMode === "and" ? "and" : "or";
+  const hasTopicsAndRisks = topics.length && risks.length;
+
+  if (years.length) parts.push(`reported in ${joinNatural(years, "or")}`);
+  if (regions.length) parts.push(`for ${joinNatural(regions, "or")}`);
+  if (types.length) parts.push(`in ${joinNatural(types, "or")} reports`);
+  if (conclusions.length) parts.push(`where the overall conclusion is ${joinNatural(conclusions, "or")}`);
+  if (obsRatings.length) parts.push(`with ${joinNatural(obsRatings, "or")} observations`);
+  if (topicRisk.length) {
+    const relation = state.browseNlMode === "and" && hasTopicsAndRisks ? "that match all of" : "related to any of";
+    parts.push(`${relation} ${joinNatural(topicRisk, topicRiskJoin)}`);
+  }
+
+  const subject = topicRisk.length || obsRatings.length
+    ? "observations"
+    : "reports";
+  const scope = parts.length ? ` ${parts.join(" ")}` : "";
+  const logicHint = hasTopicsAndRisks
+    ? ` Use ${state.browseNlMode.toUpperCase()} logic across selected topic/risk categories.`
+    : "";
+  return `Find ${subject}${scope}.${logicHint} Return the exact count and list the matching ${subject} with verified citations.`;
+}
+
+function renderBrowseNaturalLanguage(anyFilter, matches, matchedObs) {
+  const panel = $("#browseNlPanel");
+  if (!anyFilter) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+  const hasTopicRisk = state.filters.topic.size && state.filters.risk.size;
+  const question = buildBrowseQuestion();
+  const unit = matchedObs ? "observations in the exact Browse filter" : "reports in the exact Browse filter";
+  const exactCount = matchedObs || matches.length;
+  panel.hidden = false;
+  panel.innerHTML = `<div class="browse-nl-head">
+    <div>
+      <h2>Natural-language query</h2>
+      <p>Use the selected filters as a question. The Ask view can broaden broad terms and will label caveats.</p>
+    </div>
+    <div class="segmented" role="group" aria-label="Topic and risk logic">
+      <button type="button" class="${state.browseNlMode === "or" ? "active" : ""}" data-browse-nl-mode="or"
+        ${hasTopicRisk ? "" : "disabled"}>OR</button>
+      <button type="button" class="${state.browseNlMode === "and" ? "active" : ""}" data-browse-nl-mode="and"
+        ${hasTopicRisk ? "" : "disabled"}>AND</button>
+    </div>
+  </div>
+  <div class="browse-nl-query">${escHtml(question)}</div>
+  <div class="browse-nl-meta">Exact Browse preview: ${exactCount} ${escHtml(unit)}. ${state.browseNlMode === "or"
+    ? "OR favors recall in natural-language search."
+    : "AND asks for stricter overlap."}</div>
+  <div class="browse-nl-actions">
+    <button type="button" class="send-btn" id="browseAskBtn">Use in Ask all reports</button>
+    <button type="button" class="link-btn" id="browseCopyQuestion">Copy question</button>
+  </div>`;
 }
 
 /* ───────────────────────── Dashboard ─────────────────────────
@@ -479,6 +591,7 @@ function renderGuide() {
         ${canGoBack ? `<button type="button" class="link-btn" data-g-back>← Back</button>` : ""}
         ${g.objective ? `<button type="button" class="link-btn" data-g-restart>Start over</button>` : ""}
       </span></div>
+    ${g.objective ? guideProgress(g) : ""}
     ${showScope && (g.years.size || g.regions.size || g.topics.size)
       ? `<div class="guide-scope">Scope so far: ${escHtml(guideScopeLabel(g))}</div>` : ""}
     ${body}</div>`;
@@ -496,6 +609,24 @@ function guideStepObjective() {
     <button type="button" class="g-option" data-g-obj="other">Something else — let me describe it
       <span class="g-sub">Free text, answered by the repository-wide assistant with verified citations</span></button>
   </div>`;
+}
+
+function guideProgress(g) {
+  const flow = GUIDE_FLOWS[g.objective] || ["objective"];
+  const labels = {
+    objective: "Objective", years: "Years", regions: "Regions", topics: "Topics",
+    focus: "Focus", destination: "Destination", briefing: "Briefing", board: "Board pack", free: "Question",
+  };
+  const cur = Math.max(0, flow.indexOf(g.step));
+  return `<div class="guide-progress" aria-label="Guide progress">${flow.map((step, i) =>
+    `<span class="guide-step ${i < cur ? "done" : i === cur ? "current" : ""}">${escHtml(labels[step] || step)}</span>`
+  ).join("")}</div>`;
+}
+
+function guidePreview(g, label) {
+  const reports = guideScopeReports(g).length;
+  const scope = guideScopeLabel(g);
+  return `<div class="guide-preview"><strong>${escHtml(label)}</strong><span>${escHtml(scope)}</span><span>${reports} matching report${reports === 1 ? "" : "s"}</span></div>`;
 }
 
 // Multi-select scoping step (years / regions / topics). Empty selection = all.
@@ -524,6 +655,7 @@ function guideStepMulti(g, kind) {
       data-value="${escHtml(v)}"><span class="chip-label">${escHtml(label)}</span><span class="cnt">${n}</span></button>`).join("");
   const unit = kind === "topics" ? "observations" : "reports";
   return `<h1 class="guide-q">${escHtml(title)}</h1>
+    ${guidePreview(g, "Building scope")}
     <div class="g-chips">${chips}</div>
     <button type="button" class="send-btn" data-g-continue>
       ${sel.size ? "Continue with selection" : `Continue — all ${kind}`}</button>
@@ -617,6 +749,12 @@ function guideBriefing(g) {
     .join(" &nbsp; ");
   return `<h1 class="guide-q">Your briefing — ${reports.length} reports (${escHtml(guideScopeLabel(g))})</h1>
   ${excludedThematic ? `<div class="g-note">Note: ${excludedThematic} thematic report(s) have no region and are excluded by the region filter.</div>` : ""}
+  <div class="guide-metrics">
+    <span><strong>${reports.length}</strong> reports</span>
+    <span><strong>${allObs.length}</strong> observations</span>
+    <span><strong>${high.length}</strong> High</span>
+    <span><strong>${actions.length}</strong> agreed actions</span>
+  </div>
   <div class="card"><h2>Overall conclusions <span class="g-count">${reports.length} reports</span></h2>
     <p>${ratingLine}</p>
     ${worst.length ? `<p>Needing the most attention:</p><ul class="g-list">${worst.map(r =>
@@ -681,6 +819,11 @@ function guideBoardPack(g) {
   ];
   const DUE_LIMIT = 12;
   return `<h1 class="guide-q">Board pack — ${reports.length} reports (${escHtml(guideScopeLabel(g))})</h1>
+  <div class="guide-metrics">
+    <span><strong>${worst.length}</strong> conclusions needing attention</span>
+    <span><strong>${high.length}</strong> High observations</span>
+    <span><strong>${dueSoon.length}</strong> actions due soon</span>
+  </div>
   <div class="card"><h2>Conclusions needing attention <span class="g-count">${worst.length}</span></h2>
     ${worst.length ? `<ul class="g-list">${worst.map(r =>
       `<li><a class="cite-link" href="#/report/${encodeURIComponent(r.id)}">${escHtml(shortName(r))}</a>
@@ -763,7 +906,17 @@ function renderReportCards(rec) {
   if (rec.period_covered) kv.push(["Period covered", rec.period_covered]);
   if (rec.fieldwork) kv.push(["Fieldwork", rec.fieldwork]);
   kv.push(["Type", typeLabel(rec.type) + (rec.region ? " — " + rec.region : "")]);
-  html += `<div class="card">
+  const hasActions = (rec.agreed_actions || []).length;
+  const hasPractices = (rec.noteworthy_practices || []).length;
+  html += `<div class="report-section-nav" aria-label="Report sections">
+    <button type="button" class="section-jump" data-report-section="report-summary">Summary</button>
+    <button type="button" class="section-jump" data-report-section="report-conclusion">Conclusion</button>
+    ${rec.observations.length ? `<button type="button" class="section-jump" data-report-section="report-findings">Findings</button>` : ""}
+    ${hasActions ? `<button type="button" class="section-jump" data-report-section="report-actions">Actions</button>` : ""}
+    ${hasPractices ? `<button type="button" class="section-jump" data-report-section="report-practices">Practices</button>` : ""}
+    <button type="button" class="section-jump" data-report-tab="chat">Ask</button>
+  </div>`;
+  html += `<div class="card" id="report-summary">
     <h1 class="report-h1">${escHtml(rec.title)}</h1>
     <dl class="kv">${kv.map(([k, v]) => `<dt>${escHtml(k)}</dt><dd>${escHtml(v)}</dd>`).join("")}</dl>
     ${rec.source_pdf_url ? `<p><a class="link-btn" href="${escHtml(rec.source_pdf_url)}" target="_blank" rel="noopener">Official UNICEF PDF ↗</a></p>` : ""}
@@ -772,13 +925,13 @@ function renderReportCards(rec) {
 
   // 2. Overall conclusion
   const oc = rec.overall_conclusion;
-  html += `<div class="card"><h2>Overall conclusion</h2>
+  html += `<div class="card" id="report-conclusion"><h2>Overall conclusion</h2>
     <p><span class="badge ${ratingClass(oc.rating)}">${escHtml(oc.rating)}</span></p>
     ${quoteBlock(oc.quote, oc.locator)}</div>`;
 
   // 3. Key findings — one block per observation
   if (rec.observations.length) {
-    html += `<div class="card"><h2>Key findings — ${rec.observations.length} observations</h2>`;
+    html += `<div class="card" id="report-findings"><h2>Key findings — ${rec.observations.length} observations</h2>`;
     for (const o of rec.observations) {
       const badge = o.redacted
         ? `<span class="badge r-info">Redacted</span>`
@@ -799,21 +952,21 @@ function renderReportCards(rec) {
   }
 
   // 4. Agreed actions
-  if ((rec.agreed_actions || []).length) {
+  if (hasActions) {
     const rows = rec.agreed_actions.map(a => `<tr>
       <td>Obs ${a.observation}</td>
       <td><blockquote class="q" data-quote="${escHtml(a.quote)}" title="Click to locate in report text">${escHtml(a.quote)}</blockquote>
           <div class="locator">${escHtml(a.locator || "")}</div></td>
       <td>${escHtml(a.due || "—")}</td></tr>`).join("");
-    html += `<div class="card"><h2>Agreed actions</h2>
+    html += `<div class="card" id="report-actions"><h2>Agreed actions</h2>
       <table class="actions"><thead><tr><th>Obs</th><th>Action (verbatim excerpt)</th><th>Due</th></tr></thead>
       <tbody>${rows}</tbody></table>
       <div class="table-note">Excerpts — full action lists are in the report text.</div></div>`;
   }
 
   // 5. Noteworthy practices
-  if ((rec.noteworthy_practices || []).length) {
-    html += `<div class="card"><h2>Noteworthy practices</h2>
+  if (hasPractices) {
+    html += `<div class="card" id="report-practices"><h2>Noteworthy practices</h2>
       ${rec.noteworthy_practices.map(np => quoteBlock(np.quote, np.locator)).join("")}</div>`;
   }
 
@@ -1015,7 +1168,7 @@ async function finalizeAnswer(container, opts) {
  * with the source report text attached — for the exact contiguous verbatim passage.
  * A replacement is accepted ONLY if it passes the same programmatic verification;
  * otherwise the quarantine styling stays. One attempt, no recursion. */
-const REPAIR_RULES = `You fix citation quotes for the CAO Audit Navigator. Each numbered item is a citation whose quote FAILED exact verbatim verification against its report file. In the attached report text, find the single CONTIGUOUS verbatim passage that best supports the same point and re-emit the citation.
+const REPAIR_RULES = `You fix citation quotes for Enterprise Document Intelligence. Each numbered item is a citation whose quote FAILED exact verbatim verification against its report file. In the attached report text, find the single CONTIGUOUS verbatim passage that best supports the same point and re-emit the citation.
 Output EXACTLY one line per item, in the same order. Each line is either a {{cite REPORT_ID | verbatim quote | locator}} marker — quote copied character-for-character from the attached text, never spliced with "..." — or the single word NONE when no supporting passage exists. No other text, no commentary.`;
 
 async function repairCitations(container) {
@@ -1075,7 +1228,7 @@ async function repairCitations(container) {
 
 /* ───────────────────────── Chat (single report) ───────────────────────── */
 
-const ACCURACY_RULES = `You are the analysis assistant inside the CAO Audit Navigator, a tool where a Chief Audit Officer reads UNICEF OIAI internal audit reports. You answer ONLY from the report text provided in this conversation. These rules are absolute:
+const ACCURACY_RULES = `You are the analysis assistant inside Enterprise Document Intelligence, a public-data demonstration where an enterprise user reads UNICEF OIAI internal audit reports. You answer ONLY from the report text provided in this conversation. These rules are absolute:
 
 1. NO SOURCE = NOT USED. Every factual claim must end with a citation marker in EXACTLY this format: {{cite REPORT_ID | verbatim quote | locator}}. The quote must be ONE contiguous passage copied character-for-character from the report text provided in THIS conversation — do not fix typos, do not translate, do not clean up the broken spacing that comes from PDF extraction (e.g. "o bservations" stays as-is). NEVER splice a quote with "..." or omit words from its middle — if you need two passages, emit two separate markers. Never quote from memory or general knowledge: if you cannot see the passage in the provided text, the claim does not exist. The locator names the section or observation, e.g. "Observation 2" or "Executive Summary — Overall conclusion". A claim you cannot cite must be deleted, not hedged. Every quote is programmatically checked against the source file; a quote that is not an exact contiguous copy will be publicly flagged as unverified.
 2. NEVER GUESS. Never use outside knowledge, general audit knowledge, or estimates. Never state a number that is not written in the report text.
@@ -1154,7 +1307,7 @@ function routerSystem() {
   const topicIds = state.vocab.topics.map(t => `${t.id} (${t.label})`).join(", ");
   const riskIds = state.vocab.risks.map(r => `${r.id} (${r.label})`).join(", ");
   return [
-    { type: "text", text: `You are the ROUTING stage of the CAO Audit Navigator. You receive a question about a repository of UNICEF OIAI audit reports plus the verified index of all reports. Decide which reports are needed and whether the question is answerable as a count/list straight from index fields.
+    { type: "text", text: `You are the ROUTING stage of Enterprise Document Intelligence. You receive a question about a repository of UNICEF OIAI audit reports plus the verified index of all reports. Decide which reports are needed and whether the question is answerable as a count/list straight from index fields.
 
 Return STRICT JSON only — no markdown fences, no commentary — with exactly this shape:
 {"relevant_report_ids": string[], "computable_from_index": boolean, "facet_query": object|null, "reason": string}
@@ -1166,6 +1319,7 @@ Return STRICT JSON only — no markdown fences, no commentary — with exactly t
   type ∈ country_office|thematic|regional. obs_rating ∈ High|Medium. conclusion uses the full official wording.
   topics must use vocabulary ids: ${topicIds}
   risks must use vocabulary ids: ${riskIds}
+- Natural-language domain terms are recall-oriented. If a broad user phrase plausibly maps to both a topic and a risk, include both. The app will compute the exact query first and, when that is empty, show related results with a visible caveat unless the user explicitly asked for an intersection.
 - For questions needing report content (what was found, why, details, comparisons of wording), also list the relevant_report_ids — the index alone has no narrative.
 
 THE VERIFIED INDEX:
@@ -1217,11 +1371,108 @@ function computeFacetQuery(fq) {
   return { rows, obsLevel: !!obsLevel };
 }
 
-function facetResultHtml(result, fq) {
-  const { rows, obsLevel } = result;
-  const constraints = Object.entries(fq)
+function exactOnlyQuestion(question) {
+  return /\b(strict|strictly|only|both|intersection|intersect|simultaneously|and logic|all selected|all of)\b/i.test(question);
+}
+
+function topicRiskOrQuestion(question) {
+  return /\b(or logic|any of|either|topic OR risk|topics OR risks|related to any)\b/i.test(question);
+}
+
+function rowKey(row) {
+  return row.obs ? `${row.rec.id}|${row.obs.n}` : row.rec.id;
+}
+
+function unionResults(results) {
+  const byKey = new Map();
+  for (const result of results) {
+    for (const row of result.rows) byKey.set(rowKey(row), row);
+  }
+  return { rows: [...byKey.values()], obsLevel: results.some(r => r.obsLevel) };
+}
+
+function facetConstraints(fq) {
+  return Object.entries(fq)
     .filter(([, v]) => Array.isArray(v) && v.length)
     .map(([k, v]) => `${k}: ${v.join(" | ")}`).join(" · ");
+}
+
+function broadenZeroFacetQuery(fq, question) {
+  const arr = v => Array.isArray(v) ? v : [];
+  if (exactOnlyQuestion(question)) return null;
+
+  const hasTopics = arr(fq.topics).length;
+  const hasRisks = arr(fq.risks).length;
+  const hasObsRating = arr(fq.obs_rating).length;
+  const hasYears = arr(fq.year).length;
+
+  if (hasTopics && hasRisks) {
+    const result = unionResults([
+      computeFacetQuery({ ...fq, risks: [] }),
+      computeFacetQuery({ ...fq, topics: [] }),
+    ]);
+    if (result.rows.length) {
+      return {
+        result,
+        queryLabel: `${facetConstraints({ ...fq, topics: [], risks: [] }) || "no constraints"} · topics OR risks: ${[...arr(fq.topics), ...arr(fq.risks)].join(" | ")}`,
+        note: "The exact topic+risk intersection had no matches. Because the question is phrased broadly, the app is showing related observations that match either the selected topic or the selected risk.",
+      };
+    }
+  }
+
+  if (hasObsRating && (hasTopics || hasRisks)) {
+    const relaxed = { ...fq, obs_rating: [] };
+    const result = computeFacetQuery(relaxed);
+    if (result.rows.length) {
+      return {
+        result,
+        queryLabel: facetConstraints(relaxed),
+        note: "The exact observation-rating filter had no matches. The app is showing related observations regardless of rating so the absence is visible instead of hidden.",
+      };
+    }
+  }
+
+  if (hasYears && (hasTopics || hasRisks)) {
+    const base = { ...fq, year: [] };
+    const result = hasTopics && hasRisks
+      ? unionResults([
+        computeFacetQuery({ ...base, risks: [] }),
+        computeFacetQuery({ ...base, topics: [] }),
+      ])
+      : computeFacetQuery(base);
+    if (result.rows.length) {
+      return {
+        result,
+        queryLabel: hasTopics && hasRisks
+          ? `${facetConstraints({ ...base, topics: [], risks: [] }) || "no constraints"} · topics OR risks: ${[...arr(fq.topics), ...arr(fq.risks)].join(" | ")}`
+          : facetConstraints(base),
+        note: "The exact year-scoped query had no matches. The app is showing related observations from other years as context, not as matches for the requested year.",
+      };
+    }
+  }
+
+  return null;
+}
+
+function topicRiskOrQuery(fq, question) {
+  const arr = v => Array.isArray(v) ? v : [];
+  if (!arr(fq.topics).length || !arr(fq.risks).length) return null;
+  if (!topicRiskOrQuestion(question) || exactOnlyQuestion(question)) return null;
+  const result = unionResults([
+    computeFacetQuery({ ...fq, risks: [] }),
+    computeFacetQuery({ ...fq, topics: [] }),
+  ]);
+  if (!result.rows.length) return null;
+  return {
+    result,
+    queryLabel: `${facetConstraints({ ...fq, topics: [], risks: [] }) || "no constraints"} · topics OR risks: ${[...arr(fq.topics), ...arr(fq.risks)].join(" | ")}`,
+    note: "The question asks for OR logic across topic/risk categories, so the app is showing observations that match either the selected topic or the selected risk.",
+  };
+}
+
+function facetResultHtml(result, fq, note = null, exactFq = null, queryLabel = null) {
+  const { rows, obsLevel } = result;
+  const constraints = queryLabel || facetConstraints(fq);
   if (!rows.length) {
     return `<div class="index-table-wrap"><div class="index-table-caption">Verified index query (${escHtml(constraints || "no constraints")}) → <strong>0 matches</strong>.</div></div>`;
   }
@@ -1241,13 +1492,17 @@ function facetResultHtml(result, fq) {
         <td><span class="badge ${ratingClass(rec.overall_conclusion.rating)}">${escHtml(ratingShort(rec.overall_conclusion.rating))}</span></td></tr>`).join("") +
       `</tbody></table>`;
   }
+  const caption = exactFq
+    ? `Exact verified index query (${escHtml(facetConstraints(exactFq) || "no constraints")}) → <strong>0 matches</strong>. Related index query (${escHtml(constraints || "no constraints")}) → <strong>${rows.length} ${obsLevel ? "observations" : "reports"}</strong>.`
+    : `Verified index query (${escHtml(constraints || "no constraints")}) →
+    <strong>${rows.length} ${obsLevel ? "observations" : "reports"}</strong>. Computed in-app from the verified index, not by the model.`;
   return `<div class="index-table-wrap">
-    <div class="index-table-caption">Verified index query (${escHtml(constraints || "no constraints")}) →
-    <strong>${rows.length} ${obsLevel ? "observations" : "reports"}</strong>. Computed in-app from the verified index, not by the model.</div>
+    <div class="index-table-caption">${caption}</div>
+    ${note ? `<div class="index-table-caption">${escHtml(note)}</div>` : ""}
     ${table}</div>`;
 }
 
-function facetResultForModel(result) {
+function facetResultForModel(result, note = null) {
   // Compact, citable summary of the locally-computed result, given to the answer stage.
   // Each row carries its verbatim summary quote + locator so the model can emit
   // citations that pass backward verification (A4) even without full report text.
@@ -1258,6 +1513,7 @@ function facetResultForModel(result) {
              : `- ${rec.id} (${rec.year}): ${rec.overall_conclusion.rating}` +
                `\n  verbatim quote: ${rec.overall_conclusion.quote}\n  locator: ${rec.overall_conclusion.locator}`);
   return `VERIFIED INDEX DATA (computed in-app from the verified index — use these exact counts and items; do NOT recount or extend):
+${note ? `Query note: ${note}\n` : ""}
 Total: ${rows.length} ${obsLevel ? "observations" : "reports"} match.
 ${lines.join("\n")}${rows.length > 80 ? `\n…and ${rows.length - 80} more (already counted in the total).` : ""}
 
@@ -1304,6 +1560,7 @@ async function askRepository(question) {
   setBusy(true);
   const msgs = $("#repoChatMsgs");
   appendMsg(msgs, "user", question);
+  updateRepoAskEmpty();
   state.repoChat.push({ role: "user", content: question });
 
   const wrap = appendMsg(msgs, "assistant", "");
@@ -1336,12 +1593,33 @@ async function askRepository(question) {
     // ── Stage 2: compute locally what is computable (A6) ──
     let indexDataNote = null;
     if (routing.computable && routing.facetQuery) {
-      const result = computeFacetQuery(routing.facetQuery);
+      let result = computeFacetQuery(routing.facetQuery);
+      let resultNote = null;
+      let displayQuery = routing.facetQuery;
+      let exactQuery = null;
+      let queryLabel = null;
+      const forcedOr = topicRiskOrQuery(routing.facetQuery, question);
+      if (forcedOr) {
+        result = forcedOr.result;
+        resultNote = forcedOr.note;
+        exactQuery = routing.facetQuery;
+        queryLabel = forcedOr.queryLabel;
+      }
+      if (!result.rows.length) {
+        const broadened = broadenZeroFacetQuery(routing.facetQuery, question);
+        if (broadened) {
+          result = broadened.result;
+          resultNote = broadened.note;
+          displayQuery = routing.facetQuery;
+          exactQuery = routing.facetQuery;
+          queryLabel = broadened.queryLabel;
+        }
+      }
       const s2 = trailStep(trail, "Computing exact counts from the verified index");
-      indexBox.insertAdjacentHTML("beforeend", facetResultHtml(result, routing.facetQuery));
+      indexBox.insertAdjacentHTML("beforeend", facetResultHtml(result, displayQuery, resultNote, exactQuery, queryLabel));
       // 0 rows = nothing citable; a null note lets the A3 short-circuit below fire
       // instead of sending the model an empty list it can only hallucinate around.
-      indexDataNote = result.rows.length ? facetResultForModel(result) : null;
+      indexDataNote = result.rows.length ? facetResultForModel(result, resultNote) : null;
       s2.done(`${result.rows.length} match(es)`);
       scroll();
     }
@@ -1454,17 +1732,20 @@ You are the MERGE stage. The fact lists below were extracted from the reports, w
   }
 }
 
-/* ───────────────────────── Model API (Claude / local OpenAI-compatible) ─────────────────────────
- * Two providers behind one {system, messages, maxTokens} interface:
- *   "anthropic" — Claude cloud (default), Anthropic /v1/messages wire format.
+/* ───────────────────────── Model API (Claude / local / built-in proxy) ─────────────────────────
+ * Three providers behind one {system, messages, maxTokens} interface:
+ *   "anthropic" — Claude cloud with a user-provided Anthropic key.
  *   "openai"    — any OpenAI-compatible endpoint (Ollama, vLLM, LiteLLM …) for
  *                 local / on-prem demos. System blocks are flattened into one
  *                 role:"system" message; cache_control is dropped (no caching).
+ *   "proxy"     — built-in hosted demo proxy. No browser key; request body stays
+ *                 Anthropic-compatible and the server injects its own limited key.
  * Every response's exact `usage` token counts are accumulated (see Usage meter)
  * so cloud cost vs. local savings can be shown from real numbers, not estimates. */
 
 function getProvider() {
-  return localStorage.getItem("cao_provider") === "openai" ? "openai" : "anthropic";
+  const p = localStorage.getItem("cao_provider");
+  return ["anthropic", "openai", "proxy"].includes(p) ? p : "anthropic";
 }
 
 function getApiKey() {
@@ -1483,9 +1764,16 @@ function getLocalKey() {
   return localStorage.getItem("cao_local_key") || "";
 }
 
-// Provider-aware readiness: cloud needs a key; local needs a model name.
+function getProxyUrl() {
+  return localStorage.getItem("cao_proxy_url") || (window.CONFIG && window.CONFIG.proxyUrl) || "/api/messages";
+}
+
+// Provider-aware readiness: Claude needs a key; local needs a model name; proxy is keyless.
 function canCallApi() {
-  return getProvider() === "openai" ? !!getLocalModel() : !!getApiKey();
+  const p = getProvider();
+  if (p === "openai") return !!getLocalModel();
+  if (p === "proxy") return !!getProxyUrl();
+  return !!getApiKey();
 }
 
 function requireApiKey() {
@@ -1495,11 +1783,13 @@ function requireApiKey() {
 }
 
 function apiHeaders() {
-  if (getProvider() === "openai") {
+  const provider = getProvider();
+  if (provider === "openai") {
     const h = { "content-type": "application/json" };
     if (getLocalKey()) h["authorization"] = "Bearer " + getLocalKey();
     return h;
   }
+  if (provider === "proxy") return { "content-type": "application/json" };
   return {
     "content-type": "application/json",
     "x-api-key": getApiKey(),
@@ -1569,7 +1859,8 @@ function flattenSystem(system) {
 }
 
 function apiBody({ system, messages, maxTokens, stream }) {
-  if (getProvider() === "openai") {
+  const provider = getProvider();
+  if (provider === "openai") {
     const sys = flattenSystem(system);
     return JSON.stringify({
       model: getLocalModel(),
@@ -1583,7 +1874,10 @@ function apiBody({ system, messages, maxTokens, stream }) {
 }
 
 function apiUrl() {
-  return getProvider() === "openai" ? getLocalUrl() : API_URL;
+  const provider = getProvider();
+  if (provider === "openai") return getLocalUrl();
+  if (provider === "proxy") return getProxyUrl();
+  return API_URL;
 }
 
 async function callClaude({ system, messages, maxTokens }) {
@@ -1672,7 +1966,7 @@ function openaiUsage(usage) {
 function loadUsage() {
   let u;
   try { u = JSON.parse(localStorage.getItem("cao_usage") || "{}"); } catch (_) { u = {}; }
-  for (const p of ["anthropic", "openai"]) {
+  for (const p of ["anthropic", "openai", "proxy"]) {
     if (!u[p]) u[p] = { calls: 0, in: 0, out: 0, cw: 0, cr: 0 };
   }
   return u;
@@ -1702,6 +1996,7 @@ function showView(name) {
   for (const v of ["browse", "report", "ask", "dash", "guide"]) $(`#view-${v}`).hidden = v !== name;
   $$(".nav-btn[data-nav]").forEach(b =>
     b.classList.toggle("active", b.dataset.nav === name || (name === "report" && b.dataset.nav === "browse")));
+  if (name !== "browse" && $("#facetDrawer").classList.contains("open")) toggleFacets(false, false);
 }
 
 function setBusy(b) {
@@ -1719,6 +2014,12 @@ function appendMsg(container, role, text) {
   return div;
 }
 
+function updateRepoAskEmpty() {
+  const empty = $("#repoAskEmpty");
+  if (!empty) return;
+  empty.hidden = $$("#repoChatMsgs .msg").length > 0;
+}
+
 function openSettings() {
   const dlg = $("#settingsModal");
   $("#apiKeyInput").value = localStorage.getItem("cao_api_key") || "";
@@ -1726,31 +2027,50 @@ function openSettings() {
   $("#localUrlInput").value = getLocalUrl();
   $("#localModelInput").value = getLocalModel();
   $("#localKeyInput").value = getLocalKey();
+  $("#proxyUrlInput").value = getProxyUrl();
   toggleProviderFields();
   renderUsagePanel();
   dlg.showModal();
 }
 
 function toggleProviderFields() {
-  const local = $("#providerSelect").value === "openai";
-  $("#anthropicFields").hidden = local;
-  $("#localFields").hidden = !local;
+  const provider = $("#providerSelect").value;
+  $("#anthropicFields").hidden = provider !== "anthropic";
+  $("#localFields").hidden = provider !== "openai";
+  $("#proxyFields").hidden = provider !== "proxy";
 }
 
 function updateProviderBadge() {
-  $("#settingsBtn").textContent = getProvider() === "openai" ? "⚙ Local model" : "⚙ Claude";
+  const provider = getProvider();
+  const btn = $("#settingsBtn");
+  const labels = {
+    anthropic: { full: "⚙ Claude key", title: "Claude API key settings" },
+    openai: { full: "⚙ Open model", title: "Open source model API settings" },
+    proxy: { full: "⚙ Built-in API", title: "Built-in API proxy settings" },
+  };
+  const label = labels[provider] || labels.anthropic;
+  btn.title = label.title;
+  btn.setAttribute("aria-label", btn.title);
+  const full = btn.querySelector(".nav-full");
+  const short = btn.querySelector(".nav-short");
+  if (full) full.textContent = label.full;
+  if (short) short.textContent = "⚙";
 }
 
 function renderUsagePanel() {
   const all = loadUsage();
   const rows = [];
-  for (const [p, label] of [["anthropic", "Claude (cloud)"], ["openai", "Local model"]]) {
+  for (const [p, label] of [
+    ["anthropic", "Claude API"],
+    ["openai", "Open source model API"],
+    ["proxy", "Built-in API proxy"],
+  ]) {
     const u = all[p];
     if (!u.calls) continue;
     const cost = cloudCostUsd(u);
-    const costLine = p === "anthropic"
-      ? `cost ≈ $${cost.toFixed(2)}`
-      : `saved ≈ $${cost.toFixed(2)} vs Claude`;
+    const costLine = p === "openai"
+      ? `saved ≈ $${cost.toFixed(2)} vs Claude`
+      : `estimated sponsor cost ≈ $${cost.toFixed(2)}`;
     rows.push(`<div class="usage-row"><strong>${escHtml(label)}</strong> — ${u.calls} calls · ` +
       `in ${fmtTokens(u.in)}${u.cr ? ` (+${fmtTokens(u.cr)} cached)` : ""} · out ${fmtTokens(u.out)} · ${costLine}</div>`);
   }
@@ -1896,10 +2216,39 @@ $("#clearFilters").addEventListener("click", () => {
   renderBrowse();
 });
 
+$("#browseNlPanel").addEventListener("click", async e => {
+  const mode = e.target.closest("[data-browse-nl-mode]");
+  if (mode && !mode.disabled) {
+    state.browseNlMode = mode.dataset.browseNlMode === "and" ? "and" : "or";
+    renderBrowse();
+    return;
+  }
+  if (e.target.closest("#browseAskBtn")) {
+    state.pendingAsk = buildBrowseQuestion();
+    location.hash = "#/ask";
+    return;
+  }
+  if (e.target.closest("#browseCopyQuestion")) {
+    const question = buildBrowseQuestion();
+    try {
+      await navigator.clipboard.writeText(question);
+      e.target.textContent = "Copied";
+      setTimeout(() => { e.target.textContent = "Copy question"; }, 1200);
+    } catch {
+      state.pendingAsk = question;
+      location.hash = "#/ask";
+    }
+  }
+});
+
 // Mobile facet drawer open/close
 $("#filtersBtn").addEventListener("click", () => toggleFacets(true));
 $("#facetsDone").addEventListener("click", () => toggleFacets(false));
 $("#facetBackdrop").addEventListener("click", () => toggleFacets(false));
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && $("#facetDrawer").classList.contains("open")) toggleFacets(false);
+});
+window.addEventListener("resize", () => syncFacetDrawerState($("#facetDrawer").classList.contains("open")));
 
 // First-visit hint for the Guide
 $("#guideHintDismiss").addEventListener("click", () => {
@@ -1991,6 +2340,17 @@ $("#dashRoot").addEventListener("click", e => {
 
 // Report view: card quotes → highlight; tabs (delegated)
 $("#reportCards").addEventListener("click", e => {
+  const section = e.target.closest("[data-report-section]");
+  if (section) {
+    const target = document.getElementById(section.dataset.reportSection);
+    if (target) target.scrollIntoView({ block: "start", behavior: "smooth" });
+    return;
+  }
+  const tabBtn = e.target.closest("[data-report-tab]");
+  if (tabBtn) {
+    switchReportTab(tabBtn.dataset.reportTab);
+    return;
+  }
   const q = e.target.closest("blockquote.q[data-quote]");
   if (q) highlightQuote(q.dataset.quote);
 });
@@ -2042,6 +2402,14 @@ function bindChatForm(formSel, inputSel, handler) {
 bindChatForm("#reportChatForm", "#reportChatInput", askReport);
 bindChatForm("#repoChatForm", "#repoChatInput", askRepository);
 
+$("#repoAskEmpty").addEventListener("click", e => {
+  const prompt = e.target.closest("[data-prompt]");
+  if (!prompt) return;
+  const input = $("#repoChatInput");
+  input.value = prompt.dataset.prompt;
+  input.focus();
+});
+
 // Settings
 $("#settingsBtn").addEventListener("click", openSettings);
 $("#settingsCancel").addEventListener("click", () => $("#settingsModal").close());
@@ -2060,6 +2428,7 @@ $("#settingsForm").addEventListener("submit", () => {
   set("cao_local_url", $("#localUrlInput").value.trim());
   set("cao_local_model", $("#localModelInput").value.trim());
   set("cao_local_key", $("#localKeyInput").value.trim());
+  set("cao_proxy_url", $("#proxyUrlInput").value.trim());
   updateProviderBadge();
 });
 updateProviderBadge();

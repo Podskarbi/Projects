@@ -1,6 +1,8 @@
-# CAO Audit Navigator
+# Enterprise Document Intelligence
 
-A web app for a Chief Audit Officer to **browse, read, and interrogate** an organisation's internal audit reports — demonstrated on 39 public UNICEF OIAI reports (2024–2026). Plain HTML/CSS/JS, no framework, no build step.
+A portfolio demo showing how Gen AI can help enterprise users **browse, read, and interrogate** a governed document collection with verifiable citations. The demo uses 39 public UNICEF OIAI reports (2024–2026) purely for demonstration purposes; no confidential, client, or proprietary data is included. Plain HTML/CSS/JS, no framework, no build step.
+
+This is not an official UNICEF product and is not intended for operational audit decisions. It is a public-data demonstration of document intelligence patterns: verified retrieval, evidence-carrying metadata, scoped chat, deterministic dashboards, and citation quarantine.
 
 The defining property: **every factual claim the app shows is backed by a verbatim quote that is programmatically verified against the source report text.** A quote that doesn't match is publicly flagged `⚠ unverified`, never silently shown as fact. The full rules (A1–A8) are in [CLAUDE.md](CLAUDE.md) — the project constitution.
 
@@ -10,7 +12,8 @@ The defining property: **every factual claim the app shows is backed by a verbat
 ./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
 ```
 
-Open http://localhost:8801, then put your Anthropic API key in **⚙ Settings** (stored only in your browser's localStorage; calls go directly from the browser to the Claude API). Alternatively, switch Settings to any OpenAI-compatible endpoint (Ollama / vLLM / LiteLLM) for fully local demos.
+Open http://localhost:8801, then choose a model provider in **⚙ Settings**:
+your own Claude API key, your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM), or the built-in demo proxy when deployed. The built-in proxy is rate/spend limited for portfolio review and may not always be available.
 
 > Port 8801 is the default because 8765 belongs to the DAMA app. The API key, usage meter, and offline cache are per-origin — they don't follow you across ports.
 
@@ -18,7 +21,7 @@ Open http://localhost:8801, then put your Anthropic API key in **⚙ Settings** 
 
 | Surface | What it does |
 |---|---|
-| **✦ Guide** | "What is your objective today?" — scoped briefing for a new CAO, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
+| **✦ Guide** | "What is your objective today?" — scoped briefing, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
 | **Browse** | Faceted navigation (year, type, region, conclusion, topic, risk, observation rating) with exact live counts. |
 | **Dashboard** | Observations by year × rating, topic × year heatmap, agreed actions by stated due date — every figure computed in JS and clickable through to the evidence. |
 | **Report view** | Structured cards (conclusion, findings, agreed actions, noteworthy practices) beside the full report text; clicking any quote highlights the exact passage. |

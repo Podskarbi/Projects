@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "edi-demo-proxy",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-18",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:8801",
+    "ANTHROPIC_VERSION": "2023-06-01",
+    "MAX_TOKENS": "1500",
+    "MODEL_ID": "claude-3-5-haiku-latest",
+    "REQUESTS_PER_MINUTE": "8"
+  },
+  "secrets_store_secrets": [],
+  "unsafe": {
+    "bindings": []
+  }
+}

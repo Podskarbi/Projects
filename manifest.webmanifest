@@ -1,7 +1,7 @@
 {
-  "name": "CAO Audit Navigator",
-  "short_name": "CAO Audit",
-  "description": "Browse, read and interrogate internal audit reports — answers cited and verified against report text.",
+  "name": "Enterprise Document Intelligence",
+  "short_name": "Doc Intel",
+  "description": "Portfolio demo for browsing, reading and interrogating public enterprise documents with verified citations.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
