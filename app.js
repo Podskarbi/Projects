@@ -313,9 +313,11 @@ function renderResults() {
       matchedHtml = `<div class="matched-obs">${rows}${more}</div>`;
     }
     html += `<a class="result-row" href="#/report/${encodeURIComponent(rec.id)}">
-      <div class="result-title">${escHtml(rec.title)}</div>
-      <div class="result-meta">
+      <div class="result-row-top">
+        <div class="result-title">${escHtml(rec.title)}</div>
         <span class="badge ${ratingClass(rec.overall_conclusion.rating)}">${escHtml(ratingShort(rec.overall_conclusion.rating))}</span>
+      </div>
+      <div class="result-meta">
         <span>${rec.year}</span>
         <span>${escHtml(typeLabel(rec.type))}${rec.region ? " · " + escHtml(rec.region) : ""}</span>
         <span>${rec.observations.length} observations (${high} High / ${med} Medium)</span>
