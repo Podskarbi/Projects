@@ -2,6 +2,8 @@
 
 A portfolio demo showing how Gen AI can help enterprise users **browse, read, and interrogate** a governed document collection with verifiable citations. The demo uses 39 public UNICEF OIAI reports (2024–2026) purely for demonstration purposes; no confidential, client, or proprietary data is included. Plain HTML/CSS/JS, no framework, no build step.
 
+Public portfolio URL: https://podskarbi.pages.dev/
+
 This is not an official UNICEF product and is not intended for operational audit decisions. It is a public-data demonstration of document intelligence patterns: verified retrieval, evidence-carrying metadata, scoped chat, deterministic dashboards, and citation quarantine.
 
 The defining property: **every factual claim the app shows is backed by a verbatim quote that is programmatically verified against the source report text.** A quote that doesn't match is publicly flagged `⚠ unverified`, never silently shown as fact. The full rules (A1–A8) are in [CLAUDE.md](CLAUDE.md) — the project constitution.
