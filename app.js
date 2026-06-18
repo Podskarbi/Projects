@@ -172,6 +172,8 @@ function route() {
   } else if (h === "#/guide") {
     renderGuide();
     showView("guide");
+  } else if (h === "#/browse") {
+    showView("browse");
   } else {
     showView("home");
   }
@@ -2062,6 +2064,7 @@ function showView(name) {
   $$(".nav-btn[data-nav]").forEach(b =>
     b.classList.toggle("active", b.dataset.nav === name || (name === "report" && b.dataset.nav === "browse")));
   $("#brandSub").textContent = name === "home" ? "portfolio hub" : state.brandStats;
+  $("#demoBanner").hidden = name === "home";
   if (name !== "browse" && $("#facetDrawer").classList.contains("open")) toggleFacets(false, false);
 }
 

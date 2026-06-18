@@ -14,7 +14,7 @@ The defining property: **every factual claim the app shows is backed by a verbat
 ./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
 ```
 
-Open http://localhost:8801. The root page is a portfolio homepage; open the featured app from there or jump straight to `http://localhost:8801/#/ask`. New browsers default to the built-in demo proxy:
+Open http://localhost:8801. The root page is a portfolio homepage; open the featured app from there or jump straight to `http://localhost:8801/#/browse`. New browsers default to the built-in demo proxy:
 `https://edi-demo-proxy.podskarbi.workers.dev/api/messages`. It uses a low-cost Claude Haiku model through a Cloudflare Worker, has rate/spend limits, may not always be available, and can be less capable on complex synthesis.
 
 For stronger or private demos, switch provider in **⚙ Settings** to your own Claude API key or your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM).
