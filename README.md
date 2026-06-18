@@ -12,8 +12,10 @@ The defining property: **every factual claim the app shows is backed by a verbat
 ./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
 ```
 
-Open http://localhost:8801, then choose a model provider in **⚙ Settings**:
-your own Claude API key, your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM), or the built-in demo proxy when deployed. The built-in proxy is rate/spend limited for portfolio review and may not always be available.
+Open http://localhost:8801. New browsers default to the built-in demo proxy:
+`https://edi-demo-proxy.podskarbi.workers.dev/api/messages`. It uses a low-cost Claude Haiku model through a Cloudflare Worker, has rate/spend limits, may not always be available, and can be less capable on complex synthesis.
+
+For stronger or private demos, switch provider in **⚙ Settings** to your own Claude API key or your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM).
 
 > Port 8801 is the default because 8765 belongs to the DAMA app. The API key, usage meter, and offline cache are per-origin — they don't follow you across ports.
 

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.14">
+<link rel="stylesheet" href="styles.css?v=1.0.15">
 </head>
 <body>
 
@@ -66,6 +66,7 @@
             <textarea id="browseAskInput" rows="3" placeholder="Ask a question about the selected reports…"></textarea>
             <button type="submit" class="send-btn">Ask selected reports</button>
           </form>
+          <p class="home-api-note">Default demo API: Claude Haiku via a limited proxy. It may be less capable or temporarily unavailable; use Settings for your own Claude key or open-source endpoint.</p>
         </section>
         <div class="home-actions">
           <a href="#/guide" class="home-action">
@@ -136,7 +137,7 @@
       <div class="chat-msgs" id="repoChatMsgs">
         <div class="ask-empty" id="repoAskEmpty">
           <div class="chat-hint">Ask across all <span id="askRepoCount"></span> reports. Counts come from the verified
-            index; narrative claims carry verified verbatim citations.</div>
+            index; narrative claims carry verified verbatim citations. The default demo API uses Claude Haiku through a limited proxy; switch provider in Settings for stronger or private usage.</div>
           <div class="ask-prompt-grid" aria-label="Suggested questions">
             <button type="button" class="ask-prompt" data-prompt="How many cyber-related observations were reported in 2025?">Cyber observations in 2025</button>
             <button type="button" class="ask-prompt" data-prompt="Which High-rated PSEA or safeguarding observations did OIAI report, by office?">High-rated PSEA findings</button>
@@ -164,9 +165,9 @@
 
     <label for="providerSelect">Model provider</label>
     <select id="providerSelect">
+      <option value="proxy">Built-in API via proxy (default)</option>
       <option value="anthropic">Claude API provided by you</option>
       <option value="openai">Open source model API provided by you</option>
-      <option value="proxy">Built-in API via proxy</option>
     </select>
 
     <div id="anthropicFields">
@@ -190,14 +191,14 @@
     </div>
 
     <div id="proxyFields" hidden>
-      <p class="settings-note"><strong>Built-in API via proxy</strong> uses a server-side demo key managed by the app owner.
-        It is intended for portfolio review, has rate and spend limits, and may be temporarily unavailable. No API key is
-        stored in this browser.</p>
+      <p class="settings-note"><strong>Built-in API via proxy</strong> is the default portfolio-demo mode. It uses Claude
+        Haiku through a server-side key managed by the app owner, so no API key is stored in this browser.</p>
       <label for="proxyUrlInput">Proxy URL</label>
-      <input type="text" id="proxyUrlInput" placeholder="https://edi-demo-proxy.your-subdomain.workers.dev/api/messages"
+      <input type="text" id="proxyUrlInput" placeholder="https://edi-demo-proxy.podskarbi.workers.dev/api/messages"
         autocomplete="off" spellcheck="false">
-      <p class="settings-note">When the hosted proxy is not deployed on this origin, this option will show a request error.
-        You can still use your own Claude key or an OpenAI-compatible local endpoint.</p>
+      <p class="settings-note">This low-cost Haiku setup has rate and spend limits, may be temporarily unavailable, and can
+        be less capable on complex synthesis. Use your own Claude key or an OpenAI-compatible local/open-source endpoint for
+        higher limits, stronger models, or private demos.</p>
     </div>
 
     <h3 class="usage-heading">Token usage &amp; cost</h3>
@@ -231,6 +232,6 @@
 })();
 </script>
 <script src="config.js"></script>
-<script src="app.js?v=1.0.14"></script>
+<script src="app.js?v=1.0.15"></script>
 </body>
 </html>

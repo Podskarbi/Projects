@@ -15,6 +15,7 @@ const RATING_ORDER = ["Satisfactory", "Partially Satisfactory, Improvement Neede
   "Partially Satisfactory, Major Improvement Needed", "Unsatisfactory"];
 const API_URL = "https://api.anthropic.com/v1/messages";
 const API_VERSION = "2023-06-01";
+const DEFAULT_PROXY_URL = "https://edi-demo-proxy.podskarbi.workers.dev/api/messages";
 const MAX_READ_REPORTS = 15;     // repo-wide: cap reports loaded per question (never silently — a notice is shown)
 const BATCH_CHAR_LIMIT = 80000;  // repo-wide: chars of report text per API call before batching.
                                  // ~20k tokens — sized so one call + system prompt fits a 30k
@@ -1804,7 +1805,7 @@ You are the MERGE stage. The fact lists below were extracted from the reports, w
 
 function getProvider() {
   const p = localStorage.getItem("cao_provider");
-  return ["anthropic", "openai", "proxy"].includes(p) ? p : "anthropic";
+  return ["anthropic", "openai", "proxy"].includes(p) ? p : "proxy";
 }
 
 function getApiKey() {
@@ -1824,7 +1825,7 @@ function getLocalKey() {
 }
 
 function getProxyUrl() {
-  return localStorage.getItem("cao_proxy_url") || (window.CONFIG && window.CONFIG.proxyUrl) || "/api/messages";
+  return localStorage.getItem("cao_proxy_url") || (window.CONFIG && window.CONFIG.proxyUrl) || DEFAULT_PROXY_URL;
 }
 
 // Provider-aware readiness: Claude needs a key; local needs a model name; proxy is keyless.
