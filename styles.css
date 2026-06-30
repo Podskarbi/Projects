@@ -164,6 +164,18 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .preview-bars span:nth-child(2) { height: 68%; background: var(--psin); }
 .preview-bars span:nth-child(3) { height: 92%; }
 .preview-bars span:nth-child(4) { height: 55%; background: var(--psmin); }
+/* Two stacked app previews in the hero (EDI + CCM), shown at equal weight */
+.portfolio-previews { display: grid; gap: 14px; align-content: center; }
+.portfolio-preview.compact .preview-body { min-height: 0; grid-template-columns: 108px 1fr; }
+.portfolio-preview.compact .preview-sidebar { padding: 12px 10px; }
+.portfolio-preview.compact .preview-sidebar span { height: 16px; margin-bottom: 7px; }
+.portfolio-preview.compact .preview-main { padding: 16px; }
+.portfolio-preview.compact .preview-question {
+  margin-left: 0; max-width: 100%; font-size: 14px; padding: 10px 12px;
+}
+.portfolio-preview.compact .preview-answer { margin-top: 12px; padding: 12px; }
+.portfolio-preview.compact .preview-answer strong { font-size: 13px; }
+.portfolio-preview.compact .preview-bars { height: 46px; margin-top: 12px; }
 .portfolio-explainer {
   display: grid; grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
   gap: 18px; padding: 16px 0 20px; border-top: 1px solid var(--border);
@@ -178,7 +190,7 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .portfolio-projects { padding-top: 14px; }
 .portfolio-section-head { margin-bottom: 12px; }
 .portfolio-section-head h2 { margin: 0; font-size: 22px; letter-spacing: 0; }
-.project-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.8fr); gap: 14px; }
+.project-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .project-card {
   border: 1px solid var(--border); border-radius: 8px; background: var(--panel);
   box-shadow: var(--shadow); padding: 18px;
@@ -719,7 +731,7 @@ dialog::backdrop { background: rgba(28, 36, 48, 0.45); }
   .portfolio-hero { grid-template-columns: 1fr; min-height: auto; padding-top: 10px; }
   .portfolio-explainer { grid-template-columns: 1fr; }
   .capability-grid { grid-template-columns: 1fr; }
-  .portfolio-preview { order: -1; }
+  .portfolio-previews { order: -1; }
   .project-grid { grid-template-columns: 1fr; }
   .report-layout { flex-direction: column; }
   .report-cards {
@@ -753,7 +765,7 @@ dialog::backdrop { background: rgba(28, 36, 48, 0.45); }
   #settingsBtn { border-color: var(--border); }
   .portfolio-wrap { padding: 16px 12px 70px; }
   .portfolio-hero { gap: 16px; }
-  .portfolio-preview { order: 0; }
+  .portfolio-previews { order: 0; }
   .portfolio-copy h1 { font-size: 38px; }
   .portfolio-copy p { font-size: 15px; }
   .portfolio-proof { gap: 6px; }

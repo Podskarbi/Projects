@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Doc Intelligence">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=1.0.20">
+<link rel="stylesheet" href="styles.css?v=1.0.21">
 </head>
 <body>
 
@@ -46,36 +46,62 @@
         <div class="portfolio-copy">
           <p class="section-kicker">Project portfolio</p>
           <h1>Piotr Paklerski Projects</h1>
-          <p>Working Gen AI and data-product demos focused on enterprise use cases: natural-language interfaces, governed retrieval, evidence-backed answers, and decision surfaces that are usable by non-technical stakeholders.</p>
+          <p>Working Gen AI and data-product demos focused on enterprise use cases: natural-language interfaces, governed retrieval, evidence-backed answers, deterministic controls, and decision surfaces that are usable by non-technical stakeholders.</p>
           <div class="portfolio-proof" aria-label="What this portfolio demonstrates">
-            <span>Retrieval over real documents</span>
-            <span>Verified citations</span>
+            <span>Natural-language interfaces</span>
+            <span>Deterministic + verified</span>
             <span>Human-in-the-loop controls</span>
           </div>
           <div class="portfolio-actions">
-            <a class="send-btn" href="#/browse">Open the featured app</a>
-            <a class="nav-btn" href="#/dash">View dashboard</a>
+            <a class="send-btn" href="#/browse">Open EDI app</a>
+            <a class="send-btn" href="P2P CCA App/index.html">Open CCM app</a>
           </div>
         </div>
-        <div class="portfolio-preview" aria-label="Enterprise Document Intelligence preview">
-          <div class="preview-top">
-            <span></span><span></span><span></span>
-            <strong>Enterprise Document Intelligence</strong>
-          </div>
-          <div class="preview-body">
-            <div class="preview-sidebar">
-              <span></span><span></span><span></span><span></span>
+        <div class="portfolio-previews" aria-label="Project previews">
+          <!-- Enterprise Document Intelligence preview -->
+          <div class="portfolio-preview compact" aria-label="Enterprise Document Intelligence preview">
+            <div class="preview-top">
+              <span></span><span></span><span></span>
+              <strong>Enterprise Document Intelligence</strong>
             </div>
-            <div class="preview-main">
-              <div class="preview-question">How many cyber-related observations were reported in 2025?</div>
-              <div class="preview-answer">
-                <span class="preview-check">✓</span>
-                <div>
-                  <strong>Route from verified index</strong>
-                  <p>Read selected reports · verify citations · label caveats</p>
-                </div>
+            <div class="preview-body">
+              <div class="preview-sidebar">
+                <span></span><span></span><span></span><span></span>
               </div>
-              <div class="preview-bars"><span></span><span></span><span></span><span></span></div>
+              <div class="preview-main">
+                <div class="preview-question">How many cyber-related observations were reported in 2025?</div>
+                <div class="preview-answer">
+                  <span class="preview-check">✓</span>
+                  <div>
+                    <strong>Route from verified index</strong>
+                    <p>Read selected reports · verify citations · label caveats</p>
+                  </div>
+                </div>
+                <div class="preview-bars"><span></span><span></span><span></span><span></span></div>
+              </div>
+            </div>
+          </div>
+          <!-- P2P Continuous Controls Monitoring preview -->
+          <div class="portfolio-preview compact" aria-label="P2P Continuous Controls Monitoring preview">
+            <div class="preview-top">
+              <span></span><span></span><span></span>
+              <strong>P2P Control Center</strong>
+            </div>
+            <div class="preview-body">
+              <div class="preview-sidebar">
+                <span></span><span></span><span></span><span></span>
+              </div>
+              <div class="preview-main">
+                <div class="preview-question">Split-PO threshold breach flagged across 3 vendors</div>
+                <div class="preview-answer">
+                  <span class="preview-check">✓</span>
+                  <div>
+                    <strong>10 rules · 100% reconciled · 0 false positives</strong>
+                    <p>Deterministic detection · AI exception narrative</p>
+                  </div>
+                </div>
+                <div class="preview-bars"><span></span><span></span><span></span><span></span></div>
+              </div>
             </div>
           </div>
         </div>
@@ -84,12 +110,12 @@
       <section class="portfolio-explainer" aria-labelledby="demoTitle">
         <div>
           <p class="section-kicker">What this demonstrates</p>
-          <h2 id="demoTitle">Enterprise AI patterns, shown in a working browser app</h2>
+          <h2 id="demoTitle">Enterprise AI patterns, shown in working browser apps</h2>
         </div>
         <div class="capability-grid">
           <article>
-            <strong>Natural-language document access</strong>
-            <p>Users can ask questions across a collection instead of learning a search syntax or manually opening every file.</p>
+            <strong>Natural-language interfaces</strong>
+            <p>Users ask questions in plain language — across a document collection or a transaction ledger — instead of learning a query syntax or opening every record.</p>
           </article>
           <article>
             <strong>Grounded answers with controls</strong>
