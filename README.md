@@ -56,6 +56,7 @@ EDI is installable: on the same Wi-Fi, open `http://<your-mac>.local:8801` in Sa
 
 ## Documentation map
 
+- [DEPLOY.md](DEPLOY.md) — how the site and the shared demo proxy ship to Cloudflare (auto-deploy on push to `main`, manual commands, the `ALLOWED_ORIGINS` CORS gotcha).
 - [CLAUDE.md](CLAUDE.md) — EDI's constitution: product stance, accuracy rules A1–A8, data model, tech decisions.
 - [BUILD_PLAN.md](BUILD_PLAN.md) — EDI's implementation companion: per-step specs and acceptance checks.
 - [TESTLOG.md](TESTLOG.md) — EDI's verification record for every release (expected vs. actual).
