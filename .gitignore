@@ -1,5 +1,6 @@
 config.js
 .DS_Store
 .claude/
+.wrangler/
 cloudflare-worker/node_modules/
 cloudflare-worker/.wrangler/
