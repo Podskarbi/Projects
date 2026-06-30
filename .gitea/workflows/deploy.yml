@@ -22,11 +22,17 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         env:
+          # accept either the correct spelling or the legacy "CLOUDFARE" typo
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ALT_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN }}
+          ALT_ACCOUNT_ID: ${{ secrets.CLOUDFARE_ACCOUNT_ID }}
         run: |
+          : "${CLOUDFLARE_API_TOKEN:=$ALT_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:=$ALT_ACCOUNT_ID}"
+          export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
           if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
-            echo "::warning::CLOUDFLARE_API_TOKEN secret not set yet — skipping deploy."
+            echo "::warning::No Cloudflare API token secret found — skipping deploy."
             echo "Add CLOUDFLARE_API_TOKEN (and CLOUDFLARE_ACCOUNT_ID) under"
             echo "repo Settings -> Actions -> Secrets, then push again."
             exit 0
