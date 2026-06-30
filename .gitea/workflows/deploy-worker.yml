@@ -1,0 +1,42 @@
+name: Deploy edi-demo-proxy Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare-worker/**'   # only when the Worker's own files change
+  workflow_dispatch: {}           # allow manual runs from the Gitea Actions UI
+
+concurrency:
+  group: worker-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare-worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy Worker
+        env:
+          # accept either the correct spelling or the legacy "CLOUDFARE" typo
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          ALT_API_TOKEN: ${{ secrets.CLOUDFARE_API_TOKEN }}
+          ALT_ACCOUNT_ID: ${{ secrets.CLOUDFARE_ACCOUNT_ID }}
+        run: |
+          : "${CLOUDFLARE_API_TOKEN:=$ALT_API_TOKEN}"
+          : "${CLOUDFLARE_ACCOUNT_ID:=$ALT_ACCOUNT_ID}"
+          export CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "::warning::No Cloudflare API token secret found — skipping Worker deploy."
+            exit 0
+          fi
+          # NOTE: requires the token to have "Workers Scripts: Edit".
+          # --keep-vars: don't delete vars already set on the live Worker that
+          #              aren't in wrangler.jsonc (existing secrets are always kept).
+          npx --yes wrangler@4 deploy --keep-vars
