@@ -1,0 +1,37 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage tracked files (excludes .git and untracked)
+        run: |
+          rm -rf /tmp/site && mkdir -p /tmp/site
+          git archive --format=tar HEAD | tar -x -C /tmp/site
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN secret not set yet — skipping deploy."
+            echo "Add CLOUDFLARE_API_TOKEN (and CLOUDFLARE_ACCOUNT_ID) under"
+            echo "repo Settings -> Actions -> Secrets, then push again."
+            exit 0
+          fi
+          npx --yes wrangler@4 pages deploy /tmp/site \
+            --project-name=podskarbi \
+            --branch=main \
+            --commit-dirty=true
