@@ -1,12 +1,41 @@
-# Enterprise Document Intelligence
+# Piotr Paklerski — project portfolio
 
-A portfolio demo showing how Gen AI can help enterprise users **browse, read, and interrogate** a governed document collection with verifiable citations. The demo uses 39 public UNICEF OIAI reports (2024–2026) purely for demonstration purposes; no confidential, client, or proprietary data is included. Plain HTML/CSS/JS, no framework, no build step.
+A portfolio of working Gen AI / enterprise data-product demos: natural-language interfaces over governed data, deterministic logic paired with LLM narration, and citation/evidence handling that's defensible to a non-technical reviewer. Plain HTML/CSS/JS across the board — no framework, no build step.
 
-Public portfolio URL: https://podskarbi.pages.dev/
+**Live portfolio: https://podskarbi.pages.dev/**
 
-This is not an official UNICEF product and is not intended for operational audit decisions. It is a public-data demonstration of document intelligence patterns: verified retrieval, evidence-carrying metadata, scoped chat, deterministic dashboards, and citation quarantine.
+The root page is a portfolio home that links out to each demo; it is also a working app in its own right (see Enterprise Document Intelligence below).
 
-The defining property: **every factual claim the app shows is backed by a verbatim quote that is programmatically verified against the source report text.** A quote that doesn't match is publicly flagged `⚠ unverified`, never silently shown as fact. The full rules (A1–A8) are in [CLAUDE.md](CLAUDE.md) — the project constitution.
+## Projects
+
+### Enterprise Document Intelligence (EDI)
+
+Natural-language interrogation over 39 public UNICEF OIAI reports, with deterministic dashboards, scoped retrieval, and verified verbatim citations.
+
+- **Live:** [`#/browse`](https://podskarbi.pages.dev/#/browse) on the portfolio home · **Local:** `http://localhost:8801/#/browse`
+- Routes questions to relevant reports before reading full text, instead of dumping the whole corpus into context.
+- Separates exact counts (computed from a verified index) from model-generated narrative synthesis — the two are never mixed in one paragraph.
+- Every factual claim is backed by a verbatim quote that is programmatically verified against the source report text; a quote that doesn't match is flagged `⚠ unverified`, never silently shown as fact.
+- 39 reports · 280 observations · 651 verified quotes.
+
+Full detail — accuracy rules, data model, build history — is in EDI's own docs: [CLAUDE.md](CLAUDE.md), [BUILD_PLAN.md](BUILD_PLAN.md), [TESTLOG.md](TESTLOG.md). Not an official UNICEF product; a public-data demonstration only, not intended for operational audit decisions.
+
+### P2P Continuous Controls Monitoring (CCM)
+
+An interactive compliance sandbox testing ten classic procure-to-pay (P2P) audit control rules against synthetic transaction ledgers.
+
+- **Live:** [`P2P CCA App/`](https://podskarbi.pages.dev/P2P%20CCA%20App/) on the portfolio home · **Local:** `http://localhost:8801/P2P CCA App/index.html`
+- You configure a scenario (which rules to plant cases for, and how many), generate synthetic data in the browser, and run detection.
+- Detection is entirely deterministic JavaScript — the LLM (Claude Haiku) never decides whether a row is an exception. It only narrates the rows the code already flagged, one consolidated plain-language paragraph per rule.
+- "Planted vs. detected" reconciles exactly every run across all 10 rules — the credibility centerpiece of the demo.
+- A built-in chat assistant (same keyless Cloudflare Worker proxy pattern as EDI) lets you ask questions about the current ledger, rules, and exceptions.
+- 10 rules · 100% planted/detected match · 0 false positives.
+
+Build notes: [`P2P CCA App/P2P_CCM_build_brief.md`](<P2P CCA App/P2P_CCM_build_brief.md>). This is an openly synthetic sandbox — not real fraud detection, not production software.
+
+## What ties them together
+
+Both apps follow the same governing idea: **let the model explain, never let it decide the facts.** Counts, detection, and citation matching are deterministic code; the LLM is scoped to narration and synthesis, and its output is checked or reconciled against ground truth before it's trusted. Both also default to a rate-limited, keyless Cloudflare Worker proxy so reviewers can try them with zero setup, with a Settings panel to switch to your own API key or a local/open-source endpoint for stronger demos.
 
 ## Quickstart
 
@@ -14,43 +43,21 @@ The defining property: **every factual claim the app shows is backed by a verbat
 ./serve.sh            # serves on http://localhost:8801  (./serve.sh 9000 for another port)
 ```
 
-Open http://localhost:8801. The root page is a portfolio homepage; open the featured app from there or jump straight to `http://localhost:8801/#/browse`. New browsers default to the built-in demo proxy:
-`https://edi-demo-proxy.podskarbi.workers.dev/api/messages`. It uses a low-cost Claude Haiku model through a Cloudflare Worker, has rate/spend limits, may not always be available, and can be less capable on complex synthesis.
+Open http://localhost:8801 — the portfolio home links to both apps, or jump straight to `#/browse` (EDI) or `P2P CCA App/index.html` (CCM). New browsers default to the built-in demo proxy:
+`https://edi-demo-proxy.podskarbi.workers.dev/api/messages`. It uses a low-cost Claude Haiku model, has rate/spend limits, may not always be available, and can be less capable on complex synthesis.
 
-For stronger or private demos, switch provider in **⚙ Settings** to your own Claude API key or your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM).
+For stronger or private demos, switch provider in **⚙ Settings** (shared between both apps via the same `localStorage` keys) to your own Claude API key or your own OpenAI-compatible open-source/local endpoint (Ollama / vLLM / LiteLLM).
 
 > Port 8801 is the default because 8765 belongs to the DAMA app. The API key, usage meter, and offline cache are per-origin — they don't follow you across ports.
 
-## What's inside
-
-| Surface | What it does |
-|---|---|
-| **Projects home** | Portfolio hub for sharing several demos from one URL. It explains the Gen AI patterns demonstrated by the featured Enterprise Document Intelligence app. |
-| **✦ Guide** | "What is your objective today?" — scoped briefing, topic/location focus, an audit-board pack, or free text. A router, not a generator: it computes from the verified index and pre-fills chat questions without sending them. |
-| **Browse** | Faceted navigation (year, type, region, conclusion, topic, risk, observation rating) with exact live counts. |
-| **Dashboard** | Observations by year × rating, topic × year heatmap, agreed actions by stated due date — every figure computed in JS and clickable through to the evidence. |
-| **Report view** | Structured cards (conclusion, findings, agreed actions, noteworthy practices) beside the full report text; clicking any quote highlights the exact passage. |
-| **Ask this report** | Chat scoped to the open report. Answers only from its text; absent topics get "Not covered in this report." |
-| **Ask all reports** | Route → compute-from-index → read → answer pipeline with a visible progress trail. Facts come cited per report; interpretation appears only in a separately labeled Synthesis block. |
-
-Citations render as chips: ✓ verified (deep link highlights the passage in the report), or ⚠ quarantined when the quote doesn't match the source — with one automatic, verification-gated repair attempt.
-
 ## iPhone / PWA
 
-On the same Wi-Fi, open `http://<your-mac>.local:8801` in Safari → Share → **Add to Home Screen**. The app installs standalone with its own icon. On localhost (and any HTTPS origin) a service worker precaches the index and all reports, so browsing and reading work offline; the Ask features always need a connection. Over plain LAN http the app is installable but online-only (browsers require a secure context for offline caching).
-
-## Data
-
-- `library/index.json` — the verified index: 39 records, 280 observations, 651 evidence quotes, built offline and checked by `tools/verify_index.js` (650 exact matches + 1 page-number-artifact tolerance, 0 failures). Curation caveats: [library/INDEX_NOTES.md](library/INDEX_NOTES.md).
-- `library/vocabulary.json` — controlled topic/risk vocabulary (27 + 27 entries); every tag is defensible by a quote in its record.
-- `UNICEF Reports/` — source `.md` files (PDF extractions). Read-only ground truth; never edited.
+EDI is installable: on the same Wi-Fi, open `http://<your-mac>.local:8801` in Safari → Share → **Add to Home Screen**. On localhost (and any HTTPS origin) a service worker precaches EDI's index and all reports, so browsing and reading work offline; the Ask features always need a connection. CCM is not currently a PWA — it's a lighter single-page sandbox with no offline cache and no persisted session data (ledger state lives in memory only and resets on reload; only the Settings/proxy URL persist, shared with EDI).
 
 ## Documentation map
 
-- [CLAUDE.md](CLAUDE.md) — the constitution: product stance, accuracy rules A1–A8, data model, tech decisions.
-- [BUILD_PLAN.md](BUILD_PLAN.md) — implementation companion: per-step specs and acceptance checks.
-- [TESTLOG.md](TESTLOG.md) — verification record for every release (expected vs. actual). Still pending there: the live adversarial A1–A8 question sets, which need an API key.
-
-## What this is NOT
-
-Not a general audit advisor, not a re-rating engine, not open-web, not an editor of the reports. The assistant answers **only** from the repository — "What is this country's GDP?" gets "Not covered in this report."
+- [CLAUDE.md](CLAUDE.md) — EDI's constitution: product stance, accuracy rules A1–A8, data model, tech decisions.
+- [BUILD_PLAN.md](BUILD_PLAN.md) — EDI's implementation companion: per-step specs and acceptance checks.
+- [TESTLOG.md](TESTLOG.md) — EDI's verification record for every release (expected vs. actual).
+- [`P2P CCA App/P2P_CCM_build_brief.md`](<P2P CCA App/P2P_CCM_build_brief.md>) — CCM's build brief: the ten detection rules, planting/reconciliation design, and hard architectural rules (detection in code, narration only from the LLM).
+- `library/index.json` / `library/vocabulary.json` — EDI's verified index (39 records, 280 observations, 651 evidence quotes, checked by `tools/verify_index.js`) and controlled topic/risk vocabulary. Curation caveats: [library/INDEX_NOTES.md](library/INDEX_NOTES.md).
