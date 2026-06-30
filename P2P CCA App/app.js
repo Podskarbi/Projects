@@ -16,7 +16,7 @@ const state = {
   isNarrating: false,   // Narration loading state
   narrationError: null, // Narration error
   apiKey: (typeof localStorage !== 'undefined') ? (localStorage.getItem('cao_api_key') || '') : '',           // Claude API Key
-  apiEndpoint: (typeof localStorage !== 'undefined') ? (localStorage.getItem('cao_proxy_url') || 'https://api.anthropic.com/v1/messages') : 'https://api.anthropic.com/v1/messages', // Claude API Endpoint or Cloudflare Worker Proxy URL
+  apiEndpoint: (typeof localStorage !== 'undefined') ? (localStorage.getItem('cao_proxy_url') || 'https://edi-demo-proxy.podskarbi.workers.dev/api/messages') : 'https://edi-demo-proxy.podskarbi.workers.dev/api/messages', // Default: shared Cloudflare Worker proxy (keyless demo). Override with your own endpoint/key in Settings.
   chatHistory: [],      // Conversational history for rule assistant chat
   isChatting: false,    // Chat response loading state
   plantedCount: {
@@ -1587,7 +1587,7 @@ function setupEventListeners() {
   });
   
   document.getElementById('settings-save').addEventListener('click', () => {
-    state.apiEndpoint = document.getElementById('settings-endpoint-input').value.trim() || 'https://api.anthropic.com/v1/messages';
+    state.apiEndpoint = document.getElementById('settings-endpoint-input').value.trim() || 'https://edi-demo-proxy.podskarbi.workers.dev/api/messages';
     
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('cao_proxy_url', state.apiEndpoint);
